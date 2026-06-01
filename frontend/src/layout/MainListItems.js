@@ -2,6 +2,8 @@ import React, { useContext, useEffect, useReducer, useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import useHelps from "../hooks/useHelps";
+import usePlans from "../hooks/usePlans";
+import useVersion from "../hooks/useVersion";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemIcon from "@material-ui/core/ListItemIcon";
 import ListItemText from "@material-ui/core/ListItemText";
@@ -17,7 +19,7 @@ import useMediaQuery from "@material-ui/core/useMediaQuery";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import { getBackendUrl } from "../config";
 
-// Ícones modernos
+// Ícones modernos — existentes
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import HomeIcon from "@mui/icons-material/Home";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
@@ -50,6 +52,13 @@ import WebhookIcon from "@mui/icons-material/Webhook";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+// Novos ícones — novo menu
+import PhoneIcon from "@mui/icons-material/Phone";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import HistoryIcon from "@mui/icons-material/History";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
+import ViewCarouselIcon from "@mui/icons-material/ViewCarousel";
+import OndemandVideoIcon from "@mui/icons-material/OndemandVideo";
 import UserModal from "../components/UserModal";
 
 import { WhatsAppsContext } from "../context/WhatsApp/WhatsAppsContext";
@@ -207,8 +216,8 @@ const useStyles = makeStyles((theme) => ({
       },
     },
     "&.active": {
-      backgroundColor: theme.mode === "light" 
-        ? "rgba(124, 77, 255, 0.12)" 
+      backgroundColor: theme.mode === "light"
+        ? "rgba(124, 77, 255, 0.12)"
         : "rgba(124, 77, 255, 0.25)",
       "& .MuiTypography-root": {
         color: theme.palette.primary.main,
@@ -365,8 +374,8 @@ const useStyles = makeStyles((theme) => ({
     cursor: "pointer",
     minHeight: "48px",
     "&:hover": {
-      backgroundColor: theme.mode === "light" 
-        ? "rgba(124, 77, 255, 0.08)" 
+      backgroundColor: theme.mode === "light"
+        ? "rgba(124, 77, 255, 0.08)"
         : "rgba(124, 77, 255, 0.15)",
     },
   },
@@ -408,6 +417,16 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: "rgba(0, 0, 0, 0.5)",
     },
   },
+  // Separador "Menu antigo"
+  menuSectionLabel: {
+    fontSize: "10px",
+    fontWeight: 600,
+    color: "rgba(255,255,255,0.35)",
+    textTransform: "uppercase",
+    letterSpacing: "1.5px",
+    padding: "0 12px 4px",
+    display: "block",
+  },
 }));
 
 function ListItemLink(props) {
@@ -425,7 +444,6 @@ function ListItemLink(props) {
   );
 
   const handleClick = () => {
-    // Fecha o submenu após navegar (principalmente em mobile)
     if (onNavigate) {
       onNavigate();
     }
@@ -531,7 +549,7 @@ const MainListItems = ({ collapsed, drawerClose, onSubmenuOpen, submenuOpen, onT
     if (isMobile && drawerClose) {
       drawerClose();
     }
-    
+
     if (activeSubmenu === menuName) {
       setActiveSubmenu(null);
       if (onSubmenuOpen) onSubmenuOpen(false, false);
@@ -547,7 +565,6 @@ const MainListItems = ({ collapsed, drawerClose, onSubmenuOpen, submenuOpen, onT
   };
 
   const handleNavigateFromSubmenu = () => {
-    // Fecha o submenu após navegação
     if (isMobile) {
       handleCloseSubmenu();
       if (drawerClose) drawerClose();
@@ -568,6 +585,45 @@ const MainListItems = ({ collapsed, drawerClose, onSubmenuOpen, submenuOpen, onT
     handleLogout();
   };
 
+  // ── Variáveis de rota ativa — NOVO MENU ─────────────────────────────────
+  const isPainelActive =
+    location.pathname === "/" ||
+    location.pathname.startsWith("/reports");
+
+  const isConversasActive =
+    location.pathname.startsWith("/tickets") ||
+    location.pathname.startsWith("/chamadas");
+
+  const isPipelineActive =
+    location.pathname.startsWith("/kanban") ||
+    location.pathname.startsWith("/documentacao") ||
+    location.pathname.startsWith("/tags");
+
+  const isGestaoActive =
+    location.pathname.startsWith("/contacts") ||
+    location.pathname.startsWith("/schedules") ||
+    location.pathname.startsWith("/respostas-rapidas");
+
+  const isCampanhasNovoActive =
+    location.pathname === "/campaigns" ||
+    location.pathname.startsWith("/contact-lists");
+
+  const isAutomacaoActive =
+    location.pathname.startsWith("/prompts") ||
+    location.pathname.startsWith("/fluxos") ||
+    location.pathname.startsWith("/queue-integration");
+
+  const isAdminNovoActive =
+    location.pathname.startsWith("/connections") ||
+    location.pathname.startsWith("/queues") ||
+    location.pathname.startsWith("/users") ||
+    location.pathname.startsWith("/financeiro");
+
+  const isSistemaActive =
+    location.pathname.startsWith("/settings") ||
+    location.pathname.startsWith("/empresas");
+
+  // ── Variáveis de rota ativa — MENU ANTIGO ───────────────────────────────
   const isManagementActive =
     location.pathname === "/" ||
     location.pathname.startsWith("/respostas-rapidas") ||
@@ -582,29 +638,23 @@ const MainListItems = ({ collapsed, drawerClose, onSubmenuOpen, submenuOpen, onT
     location.pathname.startsWith("/etiquetas") ||
     location.pathname.startsWith("/quick-messages");
 
-const isCampaignRouteActive =
-location.pathname === "/campaigns" ||
-location.pathname.startsWith("/contact-lists") ||
-location.pathname.startsWith("/campaigns-config") ||
-location.pathname.startsWith("/automacao-frase") ||
-location.pathname.startsWith("/fluxos");
+  const isCampaignRouteActive =
+    location.pathname === "/campaigns" ||
+    location.pathname.startsWith("/contact-lists") ||
+    location.pathname.startsWith("/campaigns-config") ||
+    location.pathname.startsWith("/automacao-frase") ||
+    location.pathname.startsWith("/fluxos");
 
-const isAdministrationActive =
-location.pathname.startsWith("/users") ||
-location.pathname.startsWith("/queues") ||
-location.pathname.startsWith("/prompts") ||
-location.pathname.startsWith("/bases-conhecimento") ||
-location.pathname.startsWith("/ia-workflows") ||
-location.pathname.startsWith("/queue-integration") ||
-location.pathname.startsWith("/connections") ||
-location.pathname.startsWith("/allConnections") ||
-location.pathname.startsWith("/files") ||
-location.pathname.startsWith("/financeiro") ||
-location.pathname.startsWith("/settings") ||
-location.pathname.startsWith("/companies") ||
-location.pathname.startsWith("/announcements") ||
-location.pathname.startsWith("/messages-api") ||
-location.pathname.startsWith("/translation-manager");
+  const isFlowbuilderRouteActive =
+    location.pathname.startsWith("/automacao-frase") ||
+    location.pathname.startsWith("/fluxos") ||
+    location.pathname.startsWith("/bases-conhecimento");
+
+  const isAdministrationActive =
+    location.pathname.startsWith("/users") ||
+    location.pathname.startsWith("/queues") ||
+    location.pathname.startsWith("/prompts") ||
+    location.pathname.startsWith("/bases-conhecimento") ||
     location.pathname.startsWith("/ia-workflows") ||
     location.pathname.startsWith("/queue-integration") ||
     location.pathname.startsWith("/connections") ||
@@ -733,6 +783,24 @@ location.pathname.startsWith("/translation-manager");
       if (!activeSubmenu) return false;
 
       switch (activeSubmenu) {
+        // ── Novo menu ──
+        case "painel":
+          return !isPainelActive;
+        case "conversas":
+          return !isConversasActive;
+        case "pipeline":
+          return !isPipelineActive;
+        case "gestao":
+          return !isGestaoActive;
+        case "campanhas-novo":
+          return !isCampanhasNovoActive;
+        case "automacao":
+          return !isAutomacaoActive;
+        case "administracao-novo":
+          return !isAdminNovoActive;
+        case "sistema":
+          return !isSistemaActive;
+        // ── Menu antigo ──
         case "management":
           return !isManagementActive;
         case "communication":
@@ -789,8 +857,347 @@ location.pathname.startsWith("/translation-manager");
     }
   };
 
+  // ────────────────────────────────────────────────────────────────────────
+  // renderSubmenu — switch com NOVO MENU + MENU ANTIGO
+  // ────────────────────────────────────────────────────────────────────────
   const renderSubmenu = (menuName) => {
     switch (menuName) {
+
+      // ════════════════════════════════════════════
+      //  NOVO MENU
+      // ════════════════════════════════════════════
+
+      case "painel":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Painel</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              <ListItemLink
+                to="/"
+                primary="Dashboard"
+                icon={<DashboardOutlinedIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+              <Can
+                role={user.profile}
+                perform="dashboard:view"
+                yes={() => (
+                  <ListItemLink
+                    to="/reports"
+                    primary="Relatório"
+                    icon={<ListAltIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                )}
+              />
+            </div>
+          </>
+        );
+
+      case "conversas":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Conversas</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              {planExpired && (
+                <ListItemLink
+                  to="/tickets"
+                  primary="Chat"
+                  icon={<WhatsAppIcon />}
+                  onNavigate={handleNavigateFromSubmenu}
+                />
+              )}
+              {/* Grupos — NOVO (rota a definir) */}
+              <ListItemLink
+                to="#"
+                primary="Grupos"
+                icon={<PeopleOutlineIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+              <ListItemLink
+                to="/chamadas"
+                primary="Chamadas"
+                icon={<PhoneIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+            </div>
+          </>
+        );
+
+      case "pipeline":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Pipeline</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              {showKanban && planExpired && (
+                <ListItemLink
+                  to="/kanban"
+                  primary="Kanban"
+                  icon={<ViewKanbanIcon />}
+                  onNavigate={handleNavigateFromSubmenu}
+                />
+              )}
+              {/* Funil = antigo "Pipelines Kanban" */}
+              <ListItemLink
+                to="/documentacao"
+                primary="Funil"
+                icon={<FilterListIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+              <ListItemLink
+                to="/tags"
+                primary="Etiquetas"
+                icon={<LocalOfferOutlinedIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+            </div>
+          </>
+        );
+
+      case "gestao":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Gestão</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              {planExpired && (
+                <ListItemLink
+                  to="/contacts"
+                  primary="Lista de Contatos"
+                  icon={<ContactPhoneOutlinedIcon />}
+                  onNavigate={handleNavigateFromSubmenu}
+                />
+              )}
+              {showSchedules && planExpired && (
+                <ListItemLink
+                  to="/schedules"
+                  primary="Agendamentos / Lembretes"
+                  icon={<ScheduleIcon />}
+                  onNavigate={handleNavigateFromSubmenu}
+                />
+              )}
+              {planExpired && (
+                <ListItemLink
+                  to="/respostas-rapidas"
+                  primary="Respostas Rápidas"
+                  icon={<FlashOnIcon />}
+                  onNavigate={handleNavigateFromSubmenu}
+                />
+              )}
+              {/* Avaliação — NOVO (rota a definir) */}
+              <ListItemLink
+                to="#"
+                primary="Avaliação"
+                icon={<StarBorderIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+            </div>
+          </>
+        );
+
+      case "campanhas-novo":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Campanhas</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              {showCampaigns && planExpired && (
+                <>
+                  {/* Listas = antigo "Lista de Contatos" */}
+                  <ListItemLink
+                    to="/contact-lists"
+                    primary="Listas"
+                    icon={<PeopleOutlineIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                  {/* Disparos = antigo "Campanhas" */}
+                  <ListItemLink
+                    to="/campaigns"
+                    primary="Disparos"
+                    icon={<CampaignOutlinedIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                </>
+              )}
+              {/* Histórico — NOVO (rota a definir) */}
+              <ListItemLink
+                to="#"
+                primary="Histórico"
+                icon={<HistoryIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+              {/* Templates API Oficial — NOVO (rota a definir) */}
+              <ListItemLink
+                to="#"
+                primary="Templates API Oficial"
+                icon={<ListAltIcon />}
+                onNavigate={handleNavigateFromSubmenu}
+              />
+            </div>
+          </>
+        );
+
+      case "automacao":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Automação</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              {planExpired && (
+                <>
+                  {/* Agente de IA = antigo "Agentes IA" */}
+                  <ListItemLink
+                    to="/prompts"
+                    primary="Agente de IA"
+                    icon={<AllInclusiveIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                  {/* Construtor de Fluxos = antigo "Fluxo de conversa" */}
+                  <ListItemLink
+                    to="/fluxos"
+                    primary="Construtor de Fluxos"
+                    icon={<AccountTreeIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                </>
+              )}
+              {showIntegrations && planExpired && (
+                <ListItemLink
+                  to="/queue-integration"
+                  primary="Integrações"
+                  icon={<DeviceHubIcon />}
+                  onNavigate={handleNavigateFromSubmenu}
+                />
+              )}
+            </div>
+          </>
+        );
+
+      case "administracao-novo":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Administração</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              {/* Conexões = antigo "Canais" */}
+              {planExpired && (
+                <Can
+                  role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
+                  perform="drawer-admin-items:view"
+                  yes={() => (
+                    <ListItemLink
+                      to="/connections"
+                      primary="Conexões"
+                      icon={<SyncAltIcon />}
+                      showBadge={connectionWarning}
+                      onNavigate={handleNavigateFromSubmenu}
+                    />
+                  )}
+                />
+              )}
+              {planExpired && (
+                <Can
+                  role={user.profile}
+                  perform="dashboard:view"
+                  yes={() => (
+                    <>
+                      {/* Setores = antigo "Departamentos" */}
+                      <ListItemLink
+                        to="/queues"
+                        primary="Setores"
+                        icon={<AccountTreeOutlinedIcon />}
+                        onNavigate={handleNavigateFromSubmenu}
+                      />
+                      <ListItemLink
+                        to="/users"
+                        primary="Usuários"
+                        icon={<PeopleOutlineIcon />}
+                        onNavigate={handleNavigateFromSubmenu}
+                      />
+                    </>
+                  )}
+                />
+              )}
+              <Can
+                role={user.profile}
+                perform="dashboard:view"
+                yes={() => (
+                  <ListItemLink
+                    to="/financeiro"
+                    primary="Financeiro"
+                    icon={<LocalAtmIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                )}
+              />
+            </div>
+          </>
+        );
+
+      case "sistema":
+        return (
+          <>
+            <div className={classes.submenuHeader}>
+              <Typography className={classes.submenuTitle}>Sistema</Typography>
+            </div>
+            <div className={classes.submenuContent}>
+              {planExpired && (
+                <Can
+                  role={user.profile}
+                  perform="dashboard:view"
+                  yes={() => (
+                    <ListItemLink
+                      to="/settings"
+                      primary="Configurações"
+                      icon={<SettingsOutlinedIcon />}
+                      onNavigate={handleNavigateFromSubmenu}
+                    />
+                  )}
+                />
+              )}
+              {user.super && (
+                <>
+                  {/* Whitelabel = antigo "Empresas" */}
+                  <ListItemLink
+                    to="/empresas"
+                    primary="Whitelabel"
+                    icon={<BusinessIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                  {/* Banners — NOVO (rota a definir) */}
+                  <ListItemLink
+                    to="#"
+                    primary="Banners"
+                    icon={<ViewCarouselIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                  {/* Vídeo Tutorial — NOVO (rota a definir) */}
+                  <ListItemLink
+                    to="#"
+                    primary="Vídeo Tutorial"
+                    icon={<OndemandVideoIcon />}
+                    onNavigate={handleNavigateFromSubmenu}
+                  />
+                </>
+              )}
+            </div>
+          </>
+        );
+
+      // ════════════════════════════════════════════
+      //  MENU ANTIGO
+      // ════════════════════════════════════════════
+
       case "management":
         return (
           <>
@@ -849,7 +1256,7 @@ location.pathname.startsWith("/translation-manager");
                 <>
                   <ListItemLink
                     to="/tickets"
-                    primary={i18n.t("Inbox")}
+                    primary={i18n.t("Chat")}
                     icon={<WhatsAppIcon />}
                     onNavigate={handleNavigateFromSubmenu}
                   />
@@ -1189,10 +1596,102 @@ location.pathname.startsWith("/translation-manager");
     }
   };
 
+  // ────────────────────────────────────────────────────────────────────────
+  // Helpers de renderização do sidebar
+  // ────────────────────────────────────────────────────────────────────────
+  const renderSidebarButton = (menuKey, label, IconComponent, extraCondition = true) => {
+    if (!extraCondition) return null;
+    return (
+      <Tooltip key={menuKey} title={collapsed ? label : ""} placement="right">
+        <ListItem
+          button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMenuClick(menuKey);
+          }}
+          className={`${classes.listItem} ${activeSubmenu === menuKey ? "active" : ""}`}
+        >
+          <ListItemIcon className={classes.listItemIcon}>
+            <Avatar className={classes.iconAvatar}>
+              <IconComponent />
+            </Avatar>
+          </ListItemIcon>
+          {!collapsed && (
+            <ListItemText
+              primary={
+                <Typography className={`${classes.listItemText} ${activeSubmenu === menuKey ? "active" : ""}`}>
+                  {label}
+                </Typography>
+              }
+            />
+          )}
+        </ListItem>
+      </Tooltip>
+    );
+  };
+
   return (
     <>
       <div onClick={drawerClose} style={{ flex: 1, overflowY: "auto", paddingBottom: "80px", paddingTop: "8px" }}>
-        {/* Home Button */}
+
+        {/* ══════════════════════════════════════════════════ */}
+        {/*                    NOVO MENU                       */}
+        {/* ══════════════════════════════════════════════════ */}
+
+        {/* Painel */}
+        {renderSidebarButton("painel", "Painel", DashboardOutlinedIcon)}
+
+        {/* Conversas */}
+        {renderSidebarButton("conversas", "Conversas", ChatBubbleOutlineIcon)}
+
+        {/* Pipeline */}
+        {renderSidebarButton("pipeline", "Pipeline", ViewKanbanIcon)}
+
+        {/* Gestão */}
+        {renderSidebarButton("gestao", "Gestão", PeopleOutlineIcon)}
+
+        {/* Campanhas (novo) — visível apenas com permissão admin */}
+        {planExpired && (
+          <Can
+            role={user.profile}
+            perform="dashboard:view"
+            yes={() => renderSidebarButton("campanhas-novo", "Campanhas", CampaignOutlinedIcon)}
+          />
+        )}
+
+        {/* Automação (novo) — visível apenas com permissão admin */}
+        {planExpired && (
+          <Can
+            role={user.profile}
+            perform="dashboard:view"
+            yes={() => renderSidebarButton("automacao", "Automação", AccountTreeIcon)}
+          />
+        )}
+
+        {/* Administração (novo) */}
+        <Can
+          role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
+          perform="dashboard:view"
+          yes={() => renderSidebarButton("administracao-novo", "Administração", SettingsOutlinedIcon)}
+        />
+
+        {/* Sistema — apenas super admin */}
+        {user.super && renderSidebarButton("sistema", "Sistema", BusinessIcon)}
+
+        {/* ══════════════════════════════════════════════════ */}
+        {/*                   MENU ANTIGO                      */}
+        {/* ══════════════════════════════════════════════════ */}
+
+        <Box style={{ padding: "4px 0 2px" }}>
+          <Divider style={{ borderColor: "rgba(255,255,255,0.15)", margin: "12px 4px 6px" }} />
+          {!collapsed && (
+            <Typography className={classes.menuSectionLabel}>
+              Menu antigo
+            </Typography>
+          )}
+        </Box>
+
+        {/* Home Button (antigo) */}
         <Tooltip title={collapsed ? "Dashboard" : ""} placement="right">
           <ListItem
             button
@@ -1217,6 +1716,7 @@ location.pathname.startsWith("/translation-manager");
           </ListItem>
         </Tooltip>
 
+        {/* Management (antigo) */}
         {planExpired && (
           <Can
             role={
@@ -1254,7 +1754,8 @@ location.pathname.startsWith("/translation-manager");
             )}
           />
         )}
-        
+
+        {/* Communication (antigo) */}
         <Tooltip title={collapsed ? "Comunicação" : ""} placement="right">
           <ListItem
             button
@@ -1281,6 +1782,7 @@ location.pathname.startsWith("/translation-manager");
           </ListItem>
         </Tooltip>
 
+        {/* Campaigns (antigo) */}
         {showCampaigns && planExpired && (
           <Can
             role={user.profile}
@@ -1315,6 +1817,7 @@ location.pathname.startsWith("/translation-manager");
           />
         )}
 
+        {/* Flows (antigo) */}
         {planExpired && (
           <Can
             role={user.profile}
@@ -1349,6 +1852,7 @@ location.pathname.startsWith("/translation-manager");
           />
         )}
 
+        {/* Tools (antigo) */}
         <Tooltip title={collapsed ? "Ferramentas" : ""} placement="right">
           <ListItem
             button
@@ -1375,6 +1879,7 @@ location.pathname.startsWith("/translation-manager");
           </ListItem>
         </Tooltip>
 
+        {/* Administration (antigo) */}
         <Can
           role={user.profile === "user" && user.allowConnections === "enabled" ? "admin" : user.profile}
           perform="dashboard:view"
@@ -1414,6 +1919,7 @@ location.pathname.startsWith("/translation-manager");
         )}
       </div>
 
+      {/* ── Bottom profile section ─────────────────────────────────────── */}
       {!collapsed ? (
         <div className={classes.bottomSection}>
           <div className={classes.profileContainer} onClick={handleProfileClick}>
@@ -1434,10 +1940,10 @@ location.pathname.startsWith("/translation-manager");
       ) : (
         <div className={classes.bottomSection}>
           <Tooltip title="Perfil" placement="right">
-            <div 
-              style={{ 
-                display: "flex", 
-                justifyContent: "center", 
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
                 padding: "8px",
                 cursor: "pointer",
                 borderRadius: "8px",
@@ -1463,6 +1969,7 @@ location.pathname.startsWith("/translation-manager");
         </div>
       )}
 
+      {/* ── Submenu Drawer ─────────────────────────────────────────────── */}
       {activeSubmenu && (
         <Drawer
           className={classes.submenuDrawer}
@@ -1486,6 +1993,7 @@ location.pathname.startsWith("/translation-manager");
         </Drawer>
       )}
 
+      {/* ── Profile Drawer ─────────────────────────────────────────────── */}
       <Drawer
         className={classes.profileDrawer}
         anchor="left"
@@ -1516,10 +2024,10 @@ location.pathname.startsWith("/translation-manager");
           <div className={classes.logoutButton} onClick={handleLogoutClick}>
             <ExitToAppIcon className={classes.logoutIcon} />
             <Typography className={classes.logoutText}>
-            {isMobileSession
-              ? i18n.t("mainDrawer.appBar.user.logoutApp", { defaultValue: "Sair do app" })
-              : i18n.t("mainDrawer.appBar.user.logout")}
-          </Typography>
+              {isMobileSession
+                ? i18n.t("mainDrawer.appBar.user.logoutApp", { defaultValue: "Sair do app" })
+                : i18n.t("mainDrawer.appBar.user.logout")}
+            </Typography>
           </div>
         </div>
       </Drawer>

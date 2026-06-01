@@ -15,17 +15,17 @@ export const PAGES_CONFIG = {
     defaultFor: ["admin"]
   },
   
-  // Inbox
-  atendimentos: { 
-    group: "Inbox", 
-    name: "Conversas", 
+  // Conversas
+  atendimentos: {
+    group: "Conversas",
+    name: "Chat",
     path: "/atendimentos",
     icon: "ChatIcon",
     defaultFor: ["admin", "user"]
   },
-  chamadas: { 
-    group: "Inbox", 
-    name: "Chamadas", 
+  chamadas: {
+    group: "Conversas",
+    name: "Chamadas",
     path: "/chamadas",
     icon: "PhoneIcon",
     defaultFor: ["admin", "user"]

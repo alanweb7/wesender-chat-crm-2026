@@ -207,7 +207,7 @@ const messages = {
 					message: "Message from",
 				},
 				tabs: {
-					open: { title: "Inbox" },
+					open: { title: "Chat" },
 					closed: { title: "Resolved" },
 					search: { title: "Search" },
 				},
