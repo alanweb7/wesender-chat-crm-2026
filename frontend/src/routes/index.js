@@ -113,6 +113,7 @@ import UsagePolicy from "../pages/landingpage/UsagePolicy";
 import PrivacyPolicy from "../pages/landingpage/PrivacyPolicy";
 import PublicCheckout from "../pages/PublicCheckout";
 import Atendimentos from "../pages/Atendimentos";
+import RatingConfig from "../pages/RatingConfig";
 import { QueueSelectedProvider } from "../context/QueuesSelected/QueuesSelectedContext";
 import NotificationToast from "../components/NotificationToast";
 
@@ -273,6 +274,7 @@ const Routes = () => {
                 <ProtectedRoute exact path="/admin/saques" component={AdminSaques} />
                 <ProtectedRoute exact path="/translation-manager" component={TranslationManager} />
                 <ProtectedRoute exact path="/whitelabel" component={WhitelabelPage} />
+                <ProtectedRoute exact path="/avaliacao" component={RatingConfig} />
                 {showCampaigns && (
                   <>
                     <ProtectedRoute exact path="/contact-lists" component={ContactLists} />

@@ -927,7 +927,7 @@ const LoggedInLayout = ({ children }) => {
             : []),
           { title: "Agendamentos", path: "/agendas" },
           { title: "Respostas Rápidas", path: "/respostas-rapidas" },
-          { title: "Avaliação", path: "/avaliacao", comingSoon: true },
+          { title: "Avaliação", path: "/avaliacao" },
         ],
       },
       {

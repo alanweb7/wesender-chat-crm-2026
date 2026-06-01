@@ -113,6 +113,7 @@ import serviceOrderRoutes from "./serviceOrderRoutes";
 import groupRoutes from "./groupRoutes";
 import hostiNotasRoutes from "./hostiNotasRoutes";
 import whatsappWidgetRoutes from "./whatsappWidgetRoutes";
+import ratingConfigRoutes from "./ratingConfigRoutes";
 
 const routes = Router();
 
@@ -257,5 +258,8 @@ routes.use(userPagePermissionRoutes);
 
 // Widget WhatsApp rastreável para sites externos
 routes.use(whatsappWidgetRoutes);
+
+// Configurações de Avaliação
+routes.use(ratingConfigRoutes);
 
 export default routes;

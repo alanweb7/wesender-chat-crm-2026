@@ -119,6 +119,8 @@ import ProdutoCustomFieldDefinition from "../models/ProdutoCustomFieldDefinition
 import ProdutoCustomFieldValue from "../models/ProdutoCustomFieldValue";
 import ProdutoWhatsappSync from "../models/ProdutoWhatsappSync";
 import WhatsappWidget from "../models/WhatsappWidget";
+import RatingConfig from "../models/RatingConfig";
+import RatingOption from "../models/RatingOption";
 // eslint-disable-next-line
 const dbConfig = require("../config/database");
 
@@ -244,6 +246,8 @@ const models = [
   WhatsappWidget,
   KnowledgeBase,
   KnowledgeBaseItem,
+  RatingConfig,
+  RatingOption,
 ];
 
 sequelize.addModels(models);
