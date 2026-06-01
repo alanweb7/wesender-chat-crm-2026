@@ -36,6 +36,7 @@ import {
   Refresh,
 } from "@material-ui/icons";
 import moment from "moment";
+import api from "../../services/api";
 import { toast } from "react-toastify";
 import useDashboard from "../../hooks/useDashboard";
 
@@ -240,6 +241,7 @@ const Reports = () => {
   const [dateFrom, setDateFrom] = useState(moment().startOf('month').format('YYYY-MM-DD'));
   const [dateTo, setDateTo] = useState(moment().endOf('month').format('YYYY-MM-DD'));
   const [reportData, setReportData] = useState(null);
+  const [ratingConfigs, setRatingConfigs] = useState([]);
 
   useEffect(() => {
     loadReportData();
@@ -267,6 +269,12 @@ const Reports = () => {
     loadReportData();
   };
 
+  useEffect(() => {
+    api.get('/rating-configs')
+      .then(({ data }) => setRatingConfigs(data?.records || []))
+      .catch(e => console.error('[Avaliações] Erro ao carregar configs:', e));
+  }, []);
+
   // Dados reais ou fallback
   const counters = reportData?.counters || {
     supportFinished: 0,
@@ -291,6 +299,16 @@ const Reports = () => {
   const whatsappConnections = []; // Não disponível neste endpoint
   const products = []; // Não disponível neste endpoint
   const invoices = []; // Não disponível neste endpoint
+
+  // ─── Avaliações computeds ───────────────────────────────────────────────────
+  const npsScore = Math.round((counters.npsPromotersPerc || 0) - (counters.npsDetractorsPerc || 0));
+  const topRatedAttendants = [...attendants].sort(
+    (a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0)
+  );
+  const avgRating =
+    attendants.length > 0
+      ? attendants.reduce((sum, a) => sum + (parseFloat(a.rating) || 0), 0) / attendants.length
+      : 0;
 
   const calcTrend = (current, previous) => {
     if (!previous || previous === 0) return { isUp: true, value: 0 };
@@ -400,6 +418,7 @@ const Reports = () => {
     'Canais',
     'Produtos',
     'Faturas',
+    'Avaliações',
   ];
 
   return (
@@ -899,6 +918,374 @@ const Reports = () => {
           </Card>
         </>
       )}
+
+      {/* ═══════════════════  ABA 6 – AVALIAÇÕES  ═══════════════════ */}
+      {activeTab === 6 && (
+        <>
+          {/* KPIs */}
+          <Grid container spacing={2} style={{ marginBottom: 24 }}>
+            <Grid item xs={6} md={3}>
+              <IndicatorCard
+                icon={<Assignment style={{ color: '#fff', fontSize: 28 }} />}
+                iconBg="#3b82f6"
+                label="Total de Atendimentos"
+                value={attendants.reduce((s, a) => s + (a.tickets || 0), 0)}
+                classes={classes}
+              />
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <IndicatorCard
+                icon={npsScore >= 0
+                  ? <TrendingUp style={{ color: '#fff', fontSize: 28 }} />
+                  : <TrendingDown style={{ color: '#fff', fontSize: 28 }} />}
+                iconBg={npsScore >= 50 ? '#10b981' : npsScore >= 0 ? '#f59e0b' : '#ef4444'}
+                label="NPS Score"
+                value={npsScore > 0 ? `+${npsScore}` : `${npsScore}`}
+                classes={classes}
+              />
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <IndicatorCard
+                icon={<CheckCircle style={{ color: '#fff', fontSize: 28 }} />}
+                iconBg="#10b981"
+                label="Promotores"
+                value={`${counters.npsPromotersPerc || 0}%`}
+                classes={classes}
+              />
+            </Grid>
+            <Grid item xs={6} md={3}>
+              <IndicatorCard
+                icon={<TrendingDown style={{ color: '#fff', fontSize: 28 }} />}
+                iconBg="#ef4444"
+                label="Detratores"
+                value={`${counters.npsDetractorsPerc || 0}%`}
+                classes={classes}
+              />
+            </Grid>
+          </Grid>
+
+          {/* Linha principal */}
+          <Grid container spacing={2} style={{ marginBottom: 24 }}>
+
+            {/* Gauge NPS */}
+            <Grid item xs={12} md={4}>
+              <Card className={classes.chartCard} style={{ height: '100%' }}>
+                <Typography className={classes.chartTitle}>NPS Score</Typography>
+                <Box display="flex" flexDirection="column" alignItems="center" pt={1}>
+                  {(() => {
+                    const nc = Math.min(100, Math.max(-100, npsScore));
+                    const ar = (180 - (nc + 100) / 200 * 180) * Math.PI / 180;
+                    const nx = (100 + 65 * Math.cos(ar)).toFixed(1);
+                    const ny = (100 - 65 * Math.sin(ar)).toFixed(1);
+                    const npsFill = npsScore >= 50 ? '#10b981' : npsScore >= 0 ? '#f59e0b' : '#ef4444';
+                    return (
+                      <svg viewBox="0 0 200 115" style={{ width: '100%', maxWidth: 240 }}>
+                        {/* zonas coloridas */}
+                        <path d="M 20 100 A 80 80 0 0 1 100 20" fill="none" stroke="#fee2e2" strokeWidth="20"/>
+                        <path d="M 100 20 A 80 80 0 0 1 136.3 28.7" fill="none" stroke="#fef3c7" strokeWidth="20"/>
+                        <path d="M 136.3 28.7 A 80 80 0 0 1 180 100" fill="none" stroke="#d1fae5" strokeWidth="20"/>
+                        {/* borda fina interna */}
+                        <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth="1"/>
+                        {/* linha do marcador de zona */}
+                        <line x1="100" y1="22" x2="100" y2="14" stroke="#e5e7eb" strokeWidth="1.5"/>
+                        <line x1="136" y1="30" x2="141" y2="23" stroke="#e5e7eb" strokeWidth="1.5"/>
+                        {/* agulha */}
+                        <line x1="100" y1="100" x2={nx} y2={ny}
+                          stroke="#1a1a2e" strokeWidth="3" strokeLinecap="round"/>
+                        <circle cx="100" cy="100" r="8" fill="#1a1a2e"/>
+                        <circle cx="100" cy="100" r="4.5" fill="white"/>
+                        {/* labels */}
+                        <text x="10" y="114" fontSize="9" fill="#ef4444" textAnchor="middle">-100</text>
+                        <text x="100" y="11" fontSize="9" fill="#f59e0b" textAnchor="middle">0</text>
+                        <text x="190" y="114" fontSize="9" fill="#10b981" textAnchor="middle">100</text>
+                        {/* valor central */}
+                        <text x="100" y="90" fontSize="22" fontWeight="bold" fill={npsFill} textAnchor="middle">
+                          {npsScore > 0 ? `+${npsScore}` : npsScore}
+                        </text>
+                      </svg>
+                    );
+                  })()}
+                  <Typography style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
+                    {npsScore >= 75 ? '🏆 Excelente' : npsScore >= 50 ? '✅ Muito Bom' : npsScore >= 0 ? '⚡ Bom' : '⚠️ Crítico'}
+                  </Typography>
+                </Box>
+                <Box pt={2} style={{ borderTop: '1px solid #f3f4f6' }}>
+                  {[
+                    { label: 'Promotores',  value: counters.npsPromotersPerc  || 0, color: '#10b981' },
+                    { label: 'Neutros',     value: counters.npsPassivePerc    || 0, color: '#f59e0b' },
+                    { label: 'Detratores',  value: counters.npsDetractorsPerc || 0, color: '#ef4444' },
+                  ].map(item => (
+                    <Box key={item.label} mb={1.5}>
+                      <Box display="flex" justifyContent="space-between" mb={0.5}>
+                        <Typography style={{ fontSize: 12, color: '#6b7280' }}>{item.label}</Typography>
+                        <Typography style={{ fontSize: 12, fontWeight: 600, color: item.color }}>{item.value}%</Typography>
+                      </Box>
+                      <div style={{ height: 6, borderRadius: 3, background: '#f3f4f6' }}>
+                        <div style={{ height: '100%', width: `${item.value}%`, background: item.color, borderRadius: 3 }}/>
+                      </div>
+                    </Box>
+                  ))}
+                </Box>
+              </Card>
+            </Grid>
+
+            {/* Donut de satisfação */}
+            <Grid item xs={12} md={4}>
+              <Card className={classes.chartCard}>
+                <Typography className={classes.chartTitle}>Distribuição de Satisfação</Typography>
+                {(counters.npsPromotersPerc || counters.npsPassivePerc || counters.npsDetractorsPerc) ? (
+                  <SimpleDonutChart
+                    data={[counters.npsPromotersPerc || 1, counters.npsPassivePerc || 1, counters.npsDetractorsPerc || 1]}
+                    labels={['Promotores', 'Neutros', 'Detratores']}
+                    colors={['#10b981', '#f59e0b', '#ef4444']}
+                  />
+                ) : (
+                  <Box display="flex" alignItems="center" justifyContent="center"
+                    style={{ minHeight: 180 }} flexDirection="column">
+                    <Star style={{ fontSize: 52, color: '#e5e7eb', marginBottom: 8 }}/>
+                    <Typography style={{ fontSize: 13, color: '#9ca3af' }}>Sem dados de avaliação</Typography>
+                    <Typography style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>
+                      no período selecionado
+                    </Typography>
+                  </Box>
+                )}
+                <Box pt={2} style={{ borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-around' }}>
+                  {[
+                    { label: 'Promotores',  value: counters.npsPromotersPerc  || 0, color: '#10b981' },
+                    { label: 'Neutros',     value: counters.npsPassivePerc    || 0, color: '#f59e0b' },
+                    { label: 'Detratores',  value: counters.npsDetractorsPerc || 0, color: '#ef4444' },
+                  ].map(item => (
+                    <Box key={item.label} textAlign="center">
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, margin: '0 auto 4px' }}/>
+                      <Typography style={{ fontSize: 11, color: '#9ca3af' }}>{item.label}</Typography>
+                      <Typography style={{ fontSize: 20, fontWeight: 700, color: item.color }}>{item.value}%</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Card>
+            </Grid>
+
+            {/* Top Atendentes */}
+            <Grid item xs={12} md={4}>
+              <Card className={classes.chartCard}>
+                <Typography className={classes.chartTitle}>Top Atendentes por Avaliação</Typography>
+                {topRatedAttendants.length === 0 ? (
+                  <Box display="flex" alignItems="center" justifyContent="center"
+                    style={{ minHeight: 220 }} flexDirection="column">
+                    <People style={{ fontSize: 52, color: '#e5e7eb', marginBottom: 8 }}/>
+                    <Typography style={{ fontSize: 13, color: '#9ca3af' }}>Nenhum atendente no período</Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {topRatedAttendants.slice(0, 5).map((agent, idx) => (
+                      <Box key={agent.id || idx}
+                        display="flex" alignItems="center" justifyContent="space-between"
+                        style={{
+                          marginBottom: 14,
+                          paddingBottom: 14,
+                          borderBottom: idx < Math.min(topRatedAttendants.length - 1, 4) ? '1px solid #f3f4f6' : 'none',
+                        }}
+                      >
+                        <Box display="flex" alignItems="center">
+                          <Box position="relative" style={{ marginRight: 10 }}>
+                            <Avatar style={{
+                              width: 44, height: 44,
+                              background: ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444'][idx],
+                            }}>
+                              {agent.name?.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <div style={{
+                              position: 'absolute', bottom: 0, right: 0,
+                              width: 11, height: 11, borderRadius: '50%',
+                              background: agent.online ? '#10b981' : '#9ca3af',
+                              border: '2px solid white',
+                            }}/>
+                          </Box>
+                          <Box>
+                            <Typography style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>
+                              {agent.name}
+                            </Typography>
+                            <Typography style={{ fontSize: 11, color: '#9ca3af' }}>
+                              Abertos: {agent.activeTickets || 0} · Resolvidos: {agent.tickets || 0}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box textAlign="right">
+                          <Box display="flex" alignItems="center" justifyContent="flex-end">
+                            <Star style={{ fontSize: 13, color: '#f59e0b', marginRight: 2 }}/>
+                            <Typography style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>
+                              {parseFloat(agent.rating || 0).toFixed(1)}
+                            </Typography>
+                          </Box>
+                          <Typography style={{ fontSize: 10, color: '#9ca3af' }}>Avaliação</Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </>
+                )}
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Linha inferior */}
+          <Grid container spacing={2}>
+
+            {/* Média por atendente – barras horizontais */}
+            <Grid item xs={12} md={5}>
+              <Card className={classes.chartCard}>
+                <Typography className={classes.chartTitle}>Avaliação por Atendente</Typography>
+                <Box display="flex" alignItems="center" mb={3}>
+                  <Box mr={3} style={{ flexShrink: 0 }}>
+                    <svg viewBox="0 0 80 80" width="90" height="90">
+                      <circle cx="40" cy="40" r="30" fill="none" stroke="#f3f4f6" strokeWidth="10"/>
+                      <circle cx="40" cy="40" r="30" fill="none"
+                        stroke="#3b82f6" strokeWidth="10"
+                        strokeDasharray={`${(avgRating / 5) * 188.5} 188.5`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 40 40)"
+                      />
+                      <text x="40" y="46" textAnchor="middle" fontSize="16" fontWeight="bold" fill="#1a1a2e">
+                        {avgRating.toFixed(1)}
+                      </text>
+                    </svg>
+                  </Box>
+                  <Box>
+                    <Typography style={{ fontSize: 12, color: '#6b7280' }}>Média Geral</Typography>
+                    <Typography style={{ fontSize: 28, fontWeight: 700, color: '#1a1a2e', lineHeight: 1.1 }}>
+                      {avgRating.toFixed(1)}
+                      <span style={{ fontSize: 13, color: '#9ca3af', fontWeight: 400 }}>/5.0</span>
+                    </Typography>
+                    <Box display="flex" mt={0.5}>
+                      {[1,2,3,4,5].map(n => (
+                        <Star key={n} style={{ fontSize: 14, color: n <= Math.round(avgRating) ? '#f59e0b' : '#e5e7eb' }}/>
+                      ))}
+                    </Box>
+                    <Typography style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                      {attendants.length} atendente{attendants.length !== 1 ? 's' : ''}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {attendants.length === 0 ? (
+                  <Typography style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '16px 0' }}>
+                    Sem dados no período selecionado
+                  </Typography>
+                ) : (
+                  <Box>
+                    {topRatedAttendants.slice(0, 5).map((agent) => (
+                      <Box key={agent.id} display="flex" alignItems="center" mb={1.5}>
+                        <Typography style={{
+                          fontSize: 12, color: '#374151', width: 84, flexShrink: 0,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {agent.name?.split(' ')[0] || 'Agente'}
+                        </Typography>
+                        <Box flex={1} mx={1} style={{ height: 8, borderRadius: 4, background: '#f3f4f6', position: 'relative', overflow: 'hidden' }}>
+                          <div style={{
+                            position: 'absolute', top: 0, left: 0, height: '100%',
+                            width: `${(parseFloat(agent.rating || 0) / 5) * 100}%`,
+                            background: parseFloat(agent.rating || 0) >= 4 ? '#10b981'
+                              : parseFloat(agent.rating || 0) >= 3 ? '#3b82f6' : '#f59e0b',
+                            borderRadius: 4,
+                          }}/>
+                        </Box>
+                        <Typography style={{ fontSize: 12, fontWeight: 600, color: '#374151', width: 28, textAlign: 'right' }}>
+                          {parseFloat(agent.rating || 0).toFixed(1)}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Card>
+            </Grid>
+
+            {/* Configurações de Avaliação cadastradas */}
+            <Grid item xs={12} md={7}>
+              <Card className={classes.chartCard}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" style={{ marginBottom: 16 }}>
+                  <Typography className={classes.chartTitle} style={{ marginBottom: 0 }}>
+                    Configurações de Avaliação
+                  </Typography>
+                  <span style={{
+                    fontSize: 11, color: '#9ca3af',
+                    padding: '2px 10px', borderRadius: 12,
+                    background: '#f3f4f6', fontWeight: 500,
+                  }}>
+                    {ratingConfigs.length} configuração{ratingConfigs.length !== 1 ? 'ões' : ''}
+                  </span>
+                </Box>
+
+                {ratingConfigs.length === 0 ? (
+                  <Box display="flex" alignItems="center" justifyContent="center"
+                    style={{ minHeight: 200 }} flexDirection="column">
+                    <Star style={{ fontSize: 52, color: '#e5e7eb', marginBottom: 8 }}/>
+                    <Typography style={{ fontSize: 14, color: '#9ca3af', fontWeight: 500 }}>
+                      Nenhuma configuração cadastrada
+                    </Typography>
+                    <Typography style={{ fontSize: 12, color: '#d1d5db', marginTop: 4 }}>
+                      Acesse Gestão → Avaliação para criar
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {ratingConfigs.slice(0, 5).map((cfg, idx) => (
+                      <Box key={cfg.id} mb={2} pb={2}
+                        style={{ borderBottom: idx < Math.min(ratingConfigs.length, 5) - 1 ? '1px solid #f9fafb' : 'none' }}
+                      >
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                          <Box display="flex" alignItems="center">
+                            <div style={{
+                              width: 8, height: 8, borderRadius: '50%',
+                              background: cfg.type === 'web' ? '#8b5cf6' : '#3b82f6',
+                              marginRight: 8, flexShrink: 0,
+                            }}/>
+                            <Typography style={{ fontSize: 14, fontWeight: 600, color: '#1a1a2e' }}>
+                              {cfg.name}
+                            </Typography>
+                          </Box>
+                          <span style={{
+                            padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600,
+                            background: cfg.type === 'web' ? '#ede9fe' : '#dbeafe',
+                            color: cfg.type === 'web' ? '#7c3aed' : '#1d4ed8',
+                          }}>
+                            {cfg.type === 'web' ? 'Web' : 'Mensagem'}
+                          </span>
+                        </Box>
+                        <Typography style={{ fontSize: 12, color: '#9ca3af', marginLeft: 16, marginBottom: 6 }}>
+                          {cfg.message?.length > 80 ? cfg.message.substring(0, 80) + '…' : cfg.message}
+                        </Typography>
+                        <Box display="flex" flexWrap="wrap" style={{ gap: 4, marginLeft: 16 }}>
+                          {(cfg.options || []).slice(0, 6).map(opt => (
+                            <span key={opt.id} style={{
+                              padding: '2px 8px', borderRadius: 12, fontSize: 11,
+                              background: '#f8fafc', border: '1px solid #e5e7eb', color: '#374151',
+                            }}>
+                              <span style={{ fontWeight: 700, color: '#6b7280' }}>{opt.value}</span>
+                              {' · '}{opt.name}
+                            </span>
+                          ))}
+                          {(cfg.options || []).length > 6 && (
+                            <span style={{ fontSize: 11, color: '#9ca3af', padding: '2px 4px' }}>
+                              +{cfg.options.length - 6} mais
+                            </span>
+                          )}
+                        </Box>
+                      </Box>
+                    ))}
+                    {ratingConfigs.length > 5 && (
+                      <Typography style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', paddingTop: 8 }}>
+                        +{ratingConfigs.length - 5} configurações adicionais em Gestão → Avaliação
+                      </Typography>
+                    )}
+                  </>
+                )}
+              </Card>
+            </Grid>
+          </Grid>
+        </>
+      )}
+      {/* ═══════════════════  FIM AVALIAÇÕES  ═══════════════════════ */}
+
     </div>
   );
 };
