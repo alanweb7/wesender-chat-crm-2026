@@ -883,8 +883,104 @@ const LoggedInLayout = ({ children }) => {
 
   const menuGroups = useMemo(
     () => [
+      // ── NOVO MENU ────────────────────────────────────────────────
       {
         title: "Painel",
+        icon: <DashboardIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          { title: "Dashboard", path: "/painel", exact: true },
+          { title: "Relatório", path: "/relatorios" },
+        ],
+      },
+      {
+        title: "Conversas",
+        icon: <ChatIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          { title: "Chat", path: "/atendimentos" },
+          { title: "Grupos", path: "/grupos", comingSoon: true },
+          { title: "Chamadas", path: "/chamadas" },
+        ],
+      },
+      {
+        title: "Pipeline",
+        icon: <ViewKanbanIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          { title: "Kanban", path: "/kanban" },
+          ...((userRole !== "professional" && userRole !== "attendant")
+            ? [
+                { title: "Funil", path: "/funil" },
+                { title: "Etiquetas", path: "/etiquetas" },
+              ]
+            : []),
+        ],
+      },
+      {
+        title: "Gestão",
+        icon: <GroupIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          ...(user?.allowContacts === "enabled"
+            ? [{ title: "Lista de Contatos", path: "/contatos" }]
+            : []),
+          { title: "Agendamentos", path: "/agendas" },
+          { title: "Respostas Rápidas", path: "/respostas-rapidas" },
+          { title: "Avaliação", path: "/avaliacao", comingSoon: true },
+        ],
+      },
+      {
+        title: "Campanhas",
+        icon: <CampaignOutlinedIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          { title: "Listas", path: "/contact-lists" },
+          { title: "Disparos", path: "/campanhas" },
+          { title: "Histórico", path: "/historico-campanhas", comingSoon: true },
+          { title: "Templates API Oficial", path: "/templates-api", comingSoon: true },
+        ],
+      },
+      {
+        title: "Automação",
+        icon: <SmartToyIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          { title: "Agente de IA", path: "/agentes" },
+          { title: "Construtor de Fluxos", path: "/fluxos" },
+          { title: "Integrações", path: "/integracao" },
+        ],
+      },
+      {
+        title: "Administração",
+        icon: <BusinessIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          { title: "Conexões", path: "/canais" },
+          { title: "Setores", path: "/departamentos" },
+          { title: "Usuários", path: "/users" },
+          { title: "Financeiro", path: "/financeiro" },
+        ],
+      },
+      {
+        title: "Sistema",
+        icon: <SettingsIcon />,
+        disabled: !planActive && location.pathname !== "/financeiro",
+        children: [
+          { title: "Configurações", path: "/settings" },
+          { title: "Whitelabel", path: "/whitelabel", superAdmin: true },
+          { title: "Banners", path: "/slider-banners", superAdmin: true },
+          { title: "Vídeo Tutorial", path: "/tutorial-videos", superAdmin: true },
+          { title: "Traduções", path: "/translation-manager", superAdmin: true },
+          { title: "Empresas", path: "/empresas", superAdmin: true },
+          { title: "Planos", path: "/planos", superAdmin: true },
+        ],
+      },
+      // ── SEPARADOR ────────────────────────────────────────────────
+      { isSeparator: true, title: "Menu antigo" },
+      // ── MENU ANTIGO ──────────────────────────────────────────────
+      {
+        title: "Painel (antigo)",
         icon: <DashboardIcon />,
         disabled: !planActive && location.pathname !== "/financeiro",
         children: [
@@ -920,7 +1016,7 @@ const LoggedInLayout = ({ children }) => {
         icon: <GroupIcon />,
         disabled: !planActive && location.pathname !== "/financeiro",
         children: [
-          ...(user?.allowContacts === "enabled" 
+          ...(user?.allowContacts === "enabled"
             ? [{ title: "Contatos", path: "/contatos" }]
             : []),
           { title: "Clientes", path: "/clientes" },
@@ -929,7 +1025,7 @@ const LoggedInLayout = ({ children }) => {
         ],
       },
       {
-        title: "Automação",
+        title: "Automação (antigo)",
         icon: <SmartToyIcon />,
         disabled: !planActive && location.pathname !== "/financeiro",
         children: [
@@ -967,7 +1063,7 @@ const LoggedInLayout = ({ children }) => {
         ],
       },
       {
-        title: "Configurações",
+        title: "Configurações (antigo)",
         icon: <SettingsIcon />,
         disabled: !planActive && location.pathname !== "/financeiro",
         children: [
@@ -977,7 +1073,7 @@ const LoggedInLayout = ({ children }) => {
         ],
       },
       {
-        title: "Sistema",
+        title: "Sistema (antigo)",
         icon: <BuildIcon />,
         disabled: !planActive && location.pathname !== "/financeiro",
         children: [
@@ -997,7 +1093,7 @@ const LoggedInLayout = ({ children }) => {
           { title: "Empresas", path: "/empresas", superAdmin: true },
           { title: "Planos", path: "/planos", superAdmin: true },
         ],
-      }
+      },
     ],
     [planActive, location.pathname, userRole, user, user?.allowGroup]
   );
@@ -1048,32 +1144,38 @@ const LoggedInLayout = ({ children }) => {
     // Para todos os usuários (incluindo admins), filtrar baseado nas permissões de página
     // Super admins sempre têm acesso a tudo
     if (isSuperAdmin) return menuGroups;
-    
+
     // Para admins normais e outros usuários, filtrar baseado nas permissões
     return menuGroups
       .map((group) => {
+        // Separadores passam sempre sem filtro
+        if (group.isSeparator) return group;
+
         if (!group.children) {
           return group.path && hasMenuAccess(group.path) ? group : null;
         }
-        
+
         // Filtra os filhos baseado nas permissões de página
         const filtered = group.children.filter((child) => {
+          // Itens "em breve" sempre são exibidos (não precisam de rota real)
+          if (child.comingSoon) return true;
+
           // Se ainda estiver carregando as permissões, NÃO mostra nada (para evitar mostrar tudo)
           if (permissionsLoading) return false;
-          
+
           // Verifica se o usuário tem acesso à página
           const hasAccess = hasMenuAccess(child.path);
           if (!hasAccess) return false;
 
           // Para admins normais, ocultar itens superAdmin
           if (isAdmin && child.superAdmin) return false;
-          
+
           return true;
         });
-        
+
         // Se o grupo não tiver filhos após filtragem, não mostra o grupo
         if (filtered.length === 0) return null;
-        
+
         return { ...group, children: filtered };
       })
       .filter(group => group !== null); // Remove grupos vazios
@@ -1088,9 +1190,10 @@ const LoggedInLayout = ({ children }) => {
   // Auto-expand the menu group that contains the current path
   useEffect(() => {
     filteredMenuGroups.forEach((group) => {
+      if (group.isSeparator) return; // ignorar separadores
       if (group.children) {
         const hasActivePath = group.children.some(
-          (child) => location.pathname === child.path || location.pathname.startsWith(child.path + "/")
+          (child) => !child.comingSoon && (location.pathname === child.path || location.pathname.startsWith(child.path + "/"))
         );
         if (hasActivePath) {
           setOpenMenus((prev) => ({ ...prev, [group.title]: true }));
@@ -1195,8 +1298,22 @@ const LoggedInLayout = ({ children }) => {
       <div className={classes.sidebarContent}>
         <List className={classes.menuList}>
           <div className={classes.menuSectionLabel}>Menu</div>
-          {filteredMenuGroups.map((group) => {
-            // Item sem submenu (ex: Kanban)
+          {filteredMenuGroups.map((group, groupIdx) => {
+            // ── Separador de seção ──────────────────────────────────
+            if (group.isSeparator) {
+              return (
+                <div key={`separator-${groupIdx}`}>
+                  <Divider style={{ margin: "8px 0 4px" }} />
+                  {showMenuLabels && (
+                    <div className={classes.menuSectionLabel} style={{ marginTop: 4 }}>
+                      {group.title}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Item sem submenu
             if (!group.children) {
               return (
                 <MenuItemWithTooltip
@@ -1212,7 +1329,7 @@ const LoggedInLayout = ({ children }) => {
             // Item com submenu
             const isOpen = openMenus[group.title] || false;
             const hasActivePath = group.children.some(
-              (child) => location.pathname === child.path || location.pathname.startsWith(child.path + "/")
+              (child) => !child.comingSoon && (location.pathname === child.path || location.pathname.startsWith(child.path + "/"))
             );
 
             const parentItem = (
@@ -1262,6 +1379,31 @@ const LoggedInLayout = ({ children }) => {
                 <Collapse in={isOpen && showMenuLabels} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding className={classes.submenuList}>
                     {group.children.map((child) => {
+                      // ── Item "Em breve" ─────────────────────────
+                      if (child.comingSoon) {
+                        return (
+                          <ListItem
+                            key={child.path}
+                            className={classes.submenuItem}
+                            style={{ opacity: 0.5, cursor: "default" }}
+                          >
+                            <ListItemText
+                              primary={
+                                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  {child.title}
+                                  <Chip
+                                    label="Em breve"
+                                    size="small"
+                                    style={{ fontSize: 9, height: 16, pointerEvents: "none" }}
+                                  />
+                                </span>
+                              }
+                              classes={{ primary: classes.submenuText }}
+                            />
+                          </ListItem>
+                        );
+                      }
+
                       const isChildActive = child.exact
                         ? location.pathname === child.path
                         : location.pathname === child.path || location.pathname.startsWith(child.path + "/");
