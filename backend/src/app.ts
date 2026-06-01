@@ -44,6 +44,10 @@ Sentry.init({ dsn: process.env.SENTRY_DSN });
 
 const app = express();
 
+// Necessário para express-rate-limit funcionar corretamente atrás do nginx
+// (evita ERR_ERL_UNEXPECTED_X_FORWARDED_FOR crash loop)
+app.set('trust proxy', 1);
+
 // Configuração de filas
 app.set("queues", {
   messageQueue,
