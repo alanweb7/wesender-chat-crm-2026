@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { toast } from "react-toastify";
 import { useHistory } from "react-router-dom";
 
@@ -320,8 +320,9 @@ const FlowBuilder = () => {
   const [renamingFlowId, setRenamingFlowId] = useState(null);
   const [renameValue, setRenameValue] = useState("");
 
-  // Duplicate with name
+  // Duplicate with name — useRef garante leitura sempre do valor atual
   const [duplicateName, setDuplicateName] = useState("");
+  const duplicateNameRef = useRef("");
 
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
@@ -376,10 +377,11 @@ const FlowBuilder = () => {
   };
 
   const handleDuplicateFlow = async (flowId) => {
-    const nameToUse = duplicateName.trim();
+    // Ler do ref — sempre tem o valor atual independente de closures React
+    const nameToUse = (duplicateNameRef.current || "").trim();
     try {
-      const body = { flowId };
-      if (nameToUse) body.name = nameToUse;
+      const body = nameToUse ? { flowId, name: nameToUse } : { flowId };
+      console.log("[Duplicate] Enviando:", body);
       await api.post(`/flowbuilder/duplicate`, body);
       toast.success("Fluxo duplicado com sucesso");
       setReloadData((old) => !old);
@@ -389,6 +391,7 @@ const FlowBuilder = () => {
     setDeletingFlow(null);
     setConfirmDuplicateOpen(false);
     setDuplicateName("");
+    duplicateNameRef.current = "";
   };
 
   const handleStartRename = (flow, e) => {
@@ -526,7 +529,7 @@ const FlowBuilder = () => {
         Tem certeza que deseja deletar este fluxo? Todas as integrações relacionadas serão perdidas.
       </ConfirmationModal>
       {/* Modal de Duplicação com nome */}
-      <Dialog open={confirmDuplicateOpen} onClose={() => { setConfirmDuplicateOpen(false); setDuplicateName(""); }} maxWidth="xs" fullWidth>
+      <Dialog open={confirmDuplicateOpen} onClose={() => { setConfirmDuplicateOpen(false); setDuplicateName(""); duplicateNameRef.current = ""; }} maxWidth="xs" fullWidth>
         <DialogTitle>Duplicar fluxo</DialogTitle>
         <DialogContent>
           <Typography variant="body2" gutterBottom style={{ marginBottom: 12 }}>
@@ -540,7 +543,10 @@ const FlowBuilder = () => {
             label="Nome do novo fluxo"
             placeholder={deletingFlow ? `${deletingFlow.name} - copy` : ""}
             value={duplicateName}
-            onChange={(e) => setDuplicateName(e.target.value)}
+            onChange={(e) => {
+              duplicateNameRef.current = e.target.value;
+              setDuplicateName(e.target.value);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && deletingFlow) {
                 handleDuplicateFlow(deletingFlow.id);
@@ -549,7 +555,7 @@ const FlowBuilder = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setConfirmDuplicateOpen(false); setDuplicateName(""); }}>Cancelar</Button>
+          <Button onClick={() => { setConfirmDuplicateOpen(false); setDuplicateName(""); duplicateNameRef.current = ""; }}>Cancelar</Button>
           <Button
             onClick={() => deletingFlow && handleDuplicateFlow(deletingFlow.id)}
             variant="contained"
