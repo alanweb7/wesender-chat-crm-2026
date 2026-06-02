@@ -302,6 +302,46 @@ const useStyles = makeStyles((theme) => ({
       boxShadow: "0 2px 8px rgba(59, 130, 246, 0.25)",
     },
   },
+  flowNameBar: {
+    position: "fixed",
+    bottom: "20px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "10px",
+    padding: "6px 14px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    minWidth: 240,
+    maxWidth: 420,
+  },
+  flowNameText: {
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#374151",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    maxWidth: 320,
+    "&:hover": {
+      color: "#3b82f6",
+    },
+  },
+  flowNameInput: {
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#374151",
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    width: "100%",
+    minWidth: 160,
+  },
   backButton: {
     backgroundColor: "#f3f4f6",
     color: "#374151",
@@ -571,6 +611,8 @@ export const FlowBuilderConfig = () => {
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [nodeRenaming, setNodeRenaming] = useState(null);
   const [flowLocked, setFlowLocked] = useState(false);
+  const [flowName, setFlowName] = useState("");
+  const [editingFlowName, setEditingFlowName] = useState(false);
   const [, setPageNumber] = useState(1);
 
   const connectionLineStyle = { 
@@ -1125,6 +1167,10 @@ export const FlowBuilderConfig = () => {
         try {
           const { data } = await api.get(`/flowbuilder/flow/${id}`);
 
+          if (data.flow.name) {
+            setFlowName(data.flow.name);
+          }
+
           if (data.flow.flow !== null) {
             const flowNodes = data.flow.flow.nodes;
             setNodes(applyTitlesToNodes(flowNodes));
@@ -1409,6 +1455,20 @@ export const FlowBuilderConfig = () => {
       .then((res) => {
         toast.success("Fluxo salvo com sucesso");
       });
+  };
+
+  const saveFlowName = async () => {
+    const trimmed = flowName.trim();
+    if (!trimmed) return;
+    try {
+      await api.put("/flowbuilder", { flowId: id, name: trimmed });
+      setFlowName(trimmed);
+      toast.success("Nome do fluxo atualizado");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setEditingFlowName(false);
+    }
   };
 
   // [TODAS AS FUNÇÕES DE EVENTOS MANTIDAS IGUAIS]
@@ -1975,6 +2035,32 @@ export const FlowBuilderConfig = () => {
               </div>
             ))}
           </Stack>
+
+          {/* Flow Name Bar - Fixed bottom center */}
+          <div className={classes.flowNameBar}>
+            <EditIcon style={{ fontSize: 16, color: "#9ca3af", flexShrink: 0 }} />
+            {editingFlowName ? (
+              <input
+                className={classes.flowNameInput}
+                value={flowName}
+                autoFocus
+                onChange={(e) => setFlowName(e.target.value)}
+                onBlur={saveFlowName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveFlowName();
+                  if (e.key === "Escape") setEditingFlowName(false);
+                }}
+              />
+            ) : (
+              <span
+                className={classes.flowNameText}
+                onClick={() => setEditingFlowName(true)}
+                title="Clique para renomear"
+              >
+                {flowName || "Nome do fluxo"}
+              </span>
+            )}
+          </div>
 
           {/* Save Button - Fixed bottom right */}
           <Button

@@ -316,6 +316,13 @@ const FlowBuilder = () => {
   const [confirmDuplicateOpen, setConfirmDuplicateOpen] = useState(false);
   const [deletingFlow, setDeletingFlow] = useState(null);
 
+  // Inline rename
+  const [renamingFlowId, setRenamingFlowId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Duplicate with name
+  const [duplicateName, setDuplicateName] = useState("");
+
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
@@ -368,9 +375,9 @@ const FlowBuilder = () => {
     setConfirmOpen(false);
   };
 
-  const handleDuplicateFlow = async (flowId) => {
+  const handleDuplicateFlow = async (flowId, name) => {
     try {
-      await api.post(`/flowbuilder/duplicate`, { flowId });
+      await api.post(`/flowbuilder/duplicate`, { flowId, name: name || undefined });
       toast.success("Fluxo duplicado com sucesso");
       setReloadData((old) => !old);
     } catch (err) {
@@ -378,6 +385,29 @@ const FlowBuilder = () => {
     }
     setDeletingFlow(null);
     setConfirmDuplicateOpen(false);
+    setDuplicateName("");
+  };
+
+  const handleStartRename = (flow, e) => {
+    e.stopPropagation();
+    setRenamingFlowId(flow.id);
+    setRenameValue(flow.name);
+  };
+
+  const handleConfirmRename = async (flowId) => {
+    const trimmed = renameValue.trim();
+    if (!trimmed) {
+      setRenamingFlowId(null);
+      return;
+    }
+    try {
+      await api.put("/flowbuilder", { flowId, name: trimmed });
+      setFlows((prev) => prev.map((f) => f.id === flowId ? { ...f, name: trimmed } : f));
+      toast.success("Fluxo renomeado com sucesso");
+    } catch (err) {
+      toastError(err);
+    }
+    setRenamingFlowId(null);
   };
 
   const handleExportFlow = async (flowId) => {
@@ -492,14 +522,40 @@ const FlowBuilder = () => {
       >
         Tem certeza que deseja deletar este fluxo? Todas as integrações relacionadas serão perdidas.
       </ConfirmationModal>
-      <ConfirmationModal
-        title={deletingFlow ? `Duplicar fluxo ${deletingFlow.name}?` : ""}
-        open={confirmDuplicateOpen}
-        onClose={() => setConfirmDuplicateOpen(false)}
-        onConfirm={() => handleDuplicateFlow(deletingFlow.id)}
-      >
-        Tem certeza que deseja duplicar este fluxo?
-      </ConfirmationModal>
+      {/* Modal de Duplicação com nome */}
+      <Dialog open={confirmDuplicateOpen} onClose={() => { setConfirmDuplicateOpen(false); setDuplicateName(""); }} maxWidth="xs" fullWidth>
+        <DialogTitle>Duplicar fluxo</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" gutterBottom style={{ marginBottom: 12 }}>
+            Defina o nome para o novo fluxo cópia de <strong>{deletingFlow?.name}</strong>:
+          </Typography>
+          <TextField
+            autoFocus
+            fullWidth
+            variant="outlined"
+            size="small"
+            label="Nome do novo fluxo"
+            placeholder={deletingFlow ? `${deletingFlow.name} - copy` : ""}
+            value={duplicateName}
+            onChange={(e) => setDuplicateName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && deletingFlow) {
+                handleDuplicateFlow(deletingFlow.id, duplicateName || undefined);
+              }
+            }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setConfirmDuplicateOpen(false); setDuplicateName(""); }}>Cancelar</Button>
+          <Button
+            onClick={() => deletingFlow && handleDuplicateFlow(deletingFlow.id, duplicateName || undefined)}
+            variant="contained"
+            color="primary"
+          >
+            Duplicar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Modal de Importação */}
       <Dialog open={importModalOpen} onClose={() => setImportModalOpen(false)} maxWidth="sm" fullWidth>
@@ -597,18 +653,62 @@ const FlowBuilder = () => {
                 </Box>
 
                 {/* Info */}
-                <Box
-                  className={classes.itemInfo}
-                  onClick={() => history.push(`/flowbuilder/${flow.id}`)}
-                >
-                  <Typography className={classes.itemName}>{flow.name}</Typography>
-                  <Box className={classes.itemDetails}>
+                <Box className={classes.itemInfo}>
+                  {/* Name row with inline rename */}
+                  <Box style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                    {renamingFlowId === flow.id ? (
+                      <input
+                        autoFocus
+                        style={{
+                          fontSize: "0.9rem",
+                          fontWeight: 500,
+                          color: "#333",
+                          border: "1px solid #1976d2",
+                          borderRadius: 4,
+                          padding: "2px 6px",
+                          outline: "none",
+                          width: "100%",
+                          textAlign: "center",
+                        }}
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => handleConfirmRename(flow.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleConfirmRename(flow.id);
+                          if (e.key === "Escape") setRenamingFlowId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <>
+                        <Typography
+                          className={classes.itemName}
+                          onClick={() => history.push(`/flowbuilder/${flow.id}`)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          {flow.name}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          style={{ padding: 2, opacity: 0.5 }}
+                          onClick={(e) => handleStartRename(flow, e)}
+                          title="Renomear fluxo"
+                        >
+                          <EditIcon style={{ fontSize: 13 }} />
+                        </IconButton>
+                      </>
+                    )}
+                  </Box>
+                  <Box
+                    className={classes.itemDetails}
+                    onClick={() => history.push(`/flowbuilder/${flow.id}`)}
+                  >
                     <span>ID: {flow.id}</span>
                     {getStatusChip(flow.active)}
                   </Box>
                 </Box>
 
-                {/* Actions */}
+                {/* Actions (lápis de edição removido) */}
                 <Box className={classes.itemActions}>
                   <IconButton
                     size="small"
@@ -619,16 +719,10 @@ const FlowBuilder = () => {
                   </IconButton>
                   <IconButton
                     size="small"
-                    className={`${classes.actionButton} ${classes.editButton}`}
-                    onClick={() => handleEditFlow(flow)}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
                     className={`${classes.actionButton} ${classes.duplicateButton}`}
                     onClick={() => {
                       setDeletingFlow(flow);
+                      setDuplicateName("");
                       setConfirmDuplicateOpen(true);
                     }}
                   >
