@@ -326,11 +326,17 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid, ticket }) => 
                 onChange={(e) => setSelectedQueue(e.target.value)}
                 label={i18n.t("transferTicketModal.fieldQueuePlaceholder")}
               >
-                {queues.map((queue) => (
-                  <MenuItem key={queue.id} value={queue.id}>
-                    {queue.name}
-                  </MenuItem>
-                ))}
+                {queues.map((queue) => {
+                  const isCurrent = queue.id === ticket?.queueId;
+                  return (
+                    <MenuItem key={queue.id} value={queue.id} disabled={isCurrent}>
+                      {queue.name}
+                      {isCurrent && (
+                        <span style={{ marginLeft: 6, fontSize: 11, color: '#999' }}>(atual)</span>
+                      )}
+                    </MenuItem>
+                  );
+                })}
               </Select>
             </FormControl>
           </Grid>
