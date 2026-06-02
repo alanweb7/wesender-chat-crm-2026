@@ -2005,6 +2005,9 @@ useEffect(() => {
 	// Manter refs sincronizados para uso no WebSocket (evita closure stale)
 	const tabIndexRef = useRef(tabIndex);
 
+	// Rastreia tickets recém-removidos (delete event) para evitar re-adição por appMessage com dados obsoletos
+	const recentlyRemovedRef = useRef(new Map()); // ticketId → timestamp
+
 	// Função combinada para verificar se ticket deve ser exibido
 	const shouldDisplayTicketRef = useRef((ticket) => {
 		if (!ticket) return false;
@@ -2067,14 +2070,17 @@ useEffect(() => {
 				if (!ticketMatchesCurrentFilters(data.ticket)) {
 					// Remove da lista se já estiver visível
 					setTickets(prev => prev.filter(t => t.id !== data.ticket.id));
-					
+					// Marca como recém-removido para evitar re-adição por appMessage obsoleto
+					recentlyRemovedRef.current.set(data.ticket.id, Date.now());
+					setTimeout(() => recentlyRemovedRef.current.delete(data.ticket.id), 15000);
+
 					// **CRÍTICO: Se este ticket estava selecionado, remove da seleção**
 					const currentTicket = selectedTicketRef.current;
 					if (currentTicket && currentTicket.id === data.ticket.id) {
 						setSelectedTicket(null);
 						setMessages([]);
 					}
-					
+
 					return;
 				}
 				
@@ -2123,6 +2129,8 @@ useEffect(() => {
 						return [...updatedTickets];
 					} else if (shouldNotify && ticketMatchesCurrentFilters(data.ticket)) {
 						// **SOLUÇÃO: Usar a mesma função de filtragem da API**
+						// Ticket voltou legitimamente → limpa do set de recém-removidos
+						recentlyRemovedRef.current.delete(data.ticket.id);
 						playNotificationSound();
 						showDesktopNotification(
 							data.ticket?.contact?.name || "Novo Ticket",
@@ -2142,6 +2150,9 @@ useEffect(() => {
 			if (data.action === "delete") {
 				setTickets((prevTickets) => prevTickets.filter(t => t.id !== data.ticketId));
 				loadUnreadCounts();
+				// Marca como recém-removido para evitar re-adição por appMessage com dados obsoletos
+				recentlyRemovedRef.current.set(data.ticketId, Date.now());
+				setTimeout(() => recentlyRemovedRef.current.delete(data.ticketId), 15000);
 				const currentTicket = selectedTicketRef.current;
 				if (currentTicket && data.ticketId === currentTicket.id) {
 					setSelectedTicket(null);
@@ -2226,14 +2237,17 @@ useEffect(() => {
 					// Se o ticket não existe, verifica se pode adicionar
 					else if (data.ticket) {
 						// **SOLUÇÃO: Usar a mesma função de filtragem da API**
-						if (ticketMatchesCurrentFilters(data.ticket)) {
+						// **CRÍTICO: Não re-adicionar ticket recém-removido com dados obsoletos (ex: appMessage de transferência)**
+						const removedAt = recentlyRemovedRef.current.get(data.ticket.id);
+						const isRecentlyRemoved = removedAt && (Date.now() - removedAt) < 15000;
+						if (!isRecentlyRemoved && ticketMatchesCurrentFilters(data.ticket)) {
 							// Verificar se é ticket de Facebook/Instagram e criar lead automaticamente
 							if (["facebook", "instagram"].includes(data.ticket.channel)) {
 								if (!isAdAutomaticMessage(data.message, data.ticket.channel)) {
 									createLeadFromAd(data.ticket);
 								}
 							}
-							
+
 							const result = [data.ticket, ...prevTickets].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 							return result;
 						}
