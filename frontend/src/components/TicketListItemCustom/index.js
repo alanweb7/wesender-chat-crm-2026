@@ -720,6 +720,21 @@ const TicketListItemCustom = ({ setTabOpen, ticket }) => {
                       +{ticket.tags.filter(t => t && t.name).length - 2}
                     </span>
                   )}
+                  {/* Tags do Contato */}
+                  {ticket?.contact?.tags && ticket.contact.tags.filter(t => t && t.name).slice(0, 2).map((tag) => (
+                    <span
+                      key={`ctag-${tag.id}`}
+                      className={classes.ticketTag}
+                      style={{ backgroundColor: tag.color || "#607d8b", opacity: 0.85 }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                  {ticket?.contact?.tags && ticket.contact.tags.filter(t => t && t.name).length > 2 && (
+                    <span className={classes.ticketTag} style={{ backgroundColor: "#9e9e9e", opacity: 0.85 }}>
+                      +{ticket.contact.tags.filter(t => t && t.name).length - 2}
+                    </span>
+                  )}
                 </span>
               </Typography>
             </span>

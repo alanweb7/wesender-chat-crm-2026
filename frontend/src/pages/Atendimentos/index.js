@@ -4596,6 +4596,25 @@ useEffect(() => {
 													)}
 												</div>
 											)}
+											{/* Tags do Contato */}
+											{ticket.contact?.tags && Array.isArray(ticket.contact.tags) && ticket.contact.tags.length > 0 && (
+												<div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+													{ticket.contact.tags.filter(t => t && t.name).slice(0, 3).map(tag => (
+														<div key={tag.id} style={{ display: 'flex', alignItems: 'center', backgroundColor: tag.color || '#607d8b', padding: '2px 6px', borderRadius: 4, opacity: 0.85 }}>
+															<Typography style={{ fontSize: 9, color: '#ffffff', fontWeight: 500 }}>
+																{tag.name}
+															</Typography>
+														</div>
+													))}
+													{ticket.contact.tags.filter(t => t && t.name).length > 3 && (
+														<div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#9e9e9e', padding: '2px 6px', borderRadius: 4 }}>
+															<Typography style={{ fontSize: 9, color: '#ffffff', fontWeight: 500 }}>
+																+{ticket.contact.tags.filter(t => t && t.name).length - 3}
+															</Typography>
+														</div>
+													)}
+												</div>
+											)}
 											{/* Tempo de espera - aparece apenas uma vez */}
 											{TAB_CONFIG[tabIndex]?.key === "pending" && formatWaitingTime(ticket) && (
 												<div style={{ display: 'flex', alignItems: 'center', gap: 4, backgroundColor: '#fff3e0', padding: '2px 6px', borderRadius: 4 }}>
