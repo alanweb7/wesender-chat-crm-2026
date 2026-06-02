@@ -375,9 +375,12 @@ const FlowBuilder = () => {
     setConfirmOpen(false);
   };
 
-  const handleDuplicateFlow = async (flowId, name) => {
+  const handleDuplicateFlow = async (flowId) => {
+    const nameToUse = duplicateName.trim();
     try {
-      await api.post(`/flowbuilder/duplicate`, { flowId, name: name || undefined });
+      const body = { flowId };
+      if (nameToUse) body.name = nameToUse;
+      await api.post(`/flowbuilder/duplicate`, body);
       toast.success("Fluxo duplicado com sucesso");
       setReloadData((old) => !old);
     } catch (err) {
@@ -540,7 +543,7 @@ const FlowBuilder = () => {
             onChange={(e) => setDuplicateName(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && deletingFlow) {
-                handleDuplicateFlow(deletingFlow.id, duplicateName || undefined);
+                handleDuplicateFlow(deletingFlow.id);
               }
             }}
           />
@@ -548,7 +551,7 @@ const FlowBuilder = () => {
         <DialogActions>
           <Button onClick={() => { setConfirmDuplicateOpen(false); setDuplicateName(""); }}>Cancelar</Button>
           <Button
-            onClick={() => deletingFlow && handleDuplicateFlow(deletingFlow.id, duplicateName || undefined)}
+            onClick={() => deletingFlow && handleDuplicateFlow(deletingFlow.id)}
             variant="contained"
             color="primary"
           >

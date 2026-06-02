@@ -201,7 +201,7 @@ export const FlowUploadAudio = async (req: Request, res: Response) => {
 export const FlowDuplicate = async (req: Request, res: Response) => {
   const { flowId, name } = req.body;
 
-  const newFlow = await DuplicateFlowBuilderService({ id: flowId, name: name || undefined });
+  const newFlow = await DuplicateFlowBuilderService({ id: flowId, name: name && name.trim() ? name.trim() : undefined });
 
   return res.status(200).json(newFlow);
 };
