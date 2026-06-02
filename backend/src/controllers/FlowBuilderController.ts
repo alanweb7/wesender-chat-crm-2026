@@ -200,8 +200,13 @@ export const FlowUploadAudio = async (req: Request, res: Response) => {
 
 export const FlowDuplicate = async (req: Request, res: Response) => {
   const { flowId, name } = req.body;
+  console.log("[FlowDuplicate] body:", req.body, "| flowId:", flowId, "| name:", name);
 
-  const newFlow = await DuplicateFlowBuilderService({ id: flowId, name: name && name.trim() ? name.trim() : undefined });
+  const nameToUse = name && typeof name === "string" && name.trim() ? name.trim() : undefined;
+  console.log("[FlowDuplicate] nameToUse:", nameToUse);
+
+  const newFlow = await DuplicateFlowBuilderService({ id: flowId, name: nameToUse });
+  console.log("[FlowDuplicate] newFlow.name:", (newFlow as any)?.name);
 
   return res.status(200).json(newFlow);
 };

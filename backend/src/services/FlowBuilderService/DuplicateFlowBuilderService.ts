@@ -18,13 +18,17 @@ const DuplicateFlowBuilderService = async ({
       }
     });
 
+    const finalName = name || (flow.name + " - copy");
+    console.log("[DuplicateService] name param:", name, "| finalName:", finalName);
+
     const duplicate = await FlowBuilderModel.create({
-      name: name || (flow.name + " - copy"),
+      name: finalName,
       flow: flow.flow,
       user_id: flow.user_id,
       company_id: flow.company_id
     });
 
+    console.log("[DuplicateService] created with name:", duplicate.name);
     return duplicate;
   } catch (error) {
     console.error("Erro ao inserir o usuário:", error);
