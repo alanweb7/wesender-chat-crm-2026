@@ -1647,39 +1647,19 @@ const Atendimentos = () => {
 		setTransferTicketModalOpen(true);
 	};
 
-	const handleCloseTransferModal = async (ticketUpdated = false) => {
+	const handleCloseTransferModal = (ticketUpdated = false) => {
 		setTransferTicketModalOpen(false);
 
-		// Se o ticket foi atualizado (transferido), recarrega os dados
+		// Ticket transferido: remove da lista imediatamente, sem esperar socket
+		// O socket pode demorar ou ter race conditions — aqui garantimos a remoção visual
 		if (ticketUpdated && selectedTicket) {
-			try {
-				const { data } = await api.get(`/tickets/${selectedTicket.id}`);
-
-				// Se o ticket transferido não corresponde mais aos filtros/aba atual,
-				// remove da lista e fecha o painel — evita race condition com o socket
-				if (!ticketMatchesCurrentFilters(data)) {
-					setTickets(prevTickets => prevTickets.filter(t => t.id !== data.id));
-					setSelectedTicket(null);
-					setMessages([]);
-					return;
-				}
-
-				setSelectedTicket(data);
-
-				// Atualiza também na lista de tickets mantendo updatedAt original
-				setTickets(prevTickets => {
-					const originalTicket = prevTickets.find(t => t.id === data.id);
-					const updatedTicket = {
-						...data,
-						updatedAt: originalTicket?.updatedAt || data.updatedAt
-					};
-					return prevTickets.map(ticket =>
-						ticket.id === data.id ? updatedTicket : ticket
-					);
-				});
-
-			} catch (err) {
-			}
+			const ticketId = selectedTicket.id;
+			setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketId));
+			// Marca como recém-removido para evitar re-adição por appMessage obsoleto
+			recentlyRemovedRef.current.set(ticketId, Date.now());
+			setTimeout(() => recentlyRemovedRef.current.delete(ticketId), 15000);
+			setSelectedTicket(null);
+			setMessages([]);
 		}
 	};
 

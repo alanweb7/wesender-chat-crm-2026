@@ -228,12 +228,15 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid, ticket }) => 
 
       await api.put(`/tickets/${ticketid}`, data);
       setLoading(false);
-      
+
       // Notificar toast de sucesso
-      toast.success("Ticket transferido com sucesso! Atualizando...");
-      
-      // Fechar modal - socket vai atualizar automaticamente
-      handleClose();
+      toast.success("Ticket transferido com sucesso!");
+
+      // Fechar modal sinalizando que houve transferência (ticketUpdated=true)
+      setSearchParam("");
+      setSelectedUser(null);
+      setSelectedWhatsapp("");
+      onClose(true);
     } catch (err) {
       setLoading(false);
       toastError(err);
