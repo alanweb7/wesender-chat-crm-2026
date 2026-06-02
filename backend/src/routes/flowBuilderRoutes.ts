@@ -81,4 +81,10 @@ flowBuilder.post(
   FlowBuilderController.testFlow
 );
 
+flowBuilder.post(
+  "/flowbuilder/dispatch",
+  isAuth,
+  FlowBuilderController.dispatchFlowToTicket
+);
+
 export default flowBuilder;

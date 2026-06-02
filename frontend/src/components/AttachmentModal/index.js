@@ -19,6 +19,8 @@ import ContactsIcon from "@material-ui/icons/Contacts";
 import LocationOnIcon from "@material-ui/icons/LocationOn";
 import EmojiEmotionsIcon from "@material-ui/icons/EmojiEmotions";
 import ScheduleIcon from "@material-ui/icons/Schedule";
+import CreateIcon from "@material-ui/icons/Create";
+import AccountTreeIcon from "@material-ui/icons/AccountTree";
 
 const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
@@ -104,6 +106,12 @@ const useStyles = makeStyles((theme) => ({
   scheduleIcon: {
     color: "#d3396d",
   },
+  signIcon: {
+    color: "#1fa855",
+  },
+  flowIcon: {
+    color: "#009de2",
+  },
 }));
 
 const AttachmentModal = ({ open, onClose, onSelectOption }) => {
@@ -154,6 +162,18 @@ const AttachmentModal = ({ open, onClose, onSelectOption }) => {
       label: "Evento",
       icon: <ScheduleIcon />,
       iconClass: classes.scheduleIcon,
+    },
+    {
+      id: "sign",
+      label: "Assinar Mensagem",
+      icon: <CreateIcon />,
+      iconClass: classes.signIcon,
+    },
+    {
+      id: "flow-list",
+      label: "Lista de Fluxos",
+      icon: <AccountTreeIcon />,
+      iconClass: classes.flowIcon,
     },
   ];
 

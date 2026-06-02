@@ -106,6 +106,7 @@ import AppointmentModal from "../../components/AppointmentModal";
 import ProjectModal from "../../components/ProjectModal";
 import AttachmentModal from "../../components/AttachmentModal";
 import ContactSendModal from "../../components/ContactSendModal";
+import FlowListModal from "../../components/FlowListModal";
 import LocationModal from "../../components/LocationModal";
 import ModalCamera from "../../components/CameraModal";
 import { ClientDetailsModal, ConvertToClientModal } from "../../components/ClientDetailsModal";
@@ -784,6 +785,7 @@ const Atendimentos = () => {
 	const [contactSendModalOpen, setContactSendModalOpen] = useState(false);
 	const [locationModalOpen, setLocationModalOpen] = useState(false);
 	const [cameraModalOpen, setCameraModalOpen] = useState(false);
+	const [flowListModalOpen, setFlowListModalOpen] = useState(false);
 	const [filteredQuickMessages, setFilteredQuickMessages] = useState([]);
 	const userType = (user?.userType || "admin").toLowerCase();
 	const isRestrictedUserType = userType === "attendant" || userType === "professional";
@@ -3114,6 +3116,12 @@ useEffect(() => {
 			case "schedule":
 				setScheduleModalOpen(true);
 				break;
+			case "sign":
+				setSignMessage(prev => !prev);
+				break;
+			case "flow-list":
+				setFlowListModalOpen(true);
+				break;
 			default:
 				break;
 		}
@@ -5288,15 +5296,7 @@ useEffect(() => {
 							)}
 							{!isMobile && (
 								<>
-									<IconButton 
-										size="small"
-										onClick={() => setSignMessage(!signMessage)}
-										style={{ color: signMessage ? '#00a884' : '#54656f' }}
-										title="Assinatura (nome do atendente)"
-									>
-										<SignatureIcon />
-									</IconButton>
-									<IconButton 
+									<IconButton
 										size="small"
 										onClick={() => setShowEmojiPicker(!showEmojiPicker)}
 										style={{ color: '#54656f' }}
@@ -5889,6 +5889,13 @@ useEffect(() => {
 				isOpen={cameraModalOpen}
 				onRequestClose={() => setCameraModalOpen(false)}
 				onCapture={handleCameraCapture}
+			/>
+
+			{/* Modal de Lista de Fluxos */}
+			<FlowListModal
+				open={flowListModalOpen}
+				onClose={() => setFlowListModalOpen(false)}
+				ticketId={selectedTicket?.id}
 			/>
 		</div>
 	);

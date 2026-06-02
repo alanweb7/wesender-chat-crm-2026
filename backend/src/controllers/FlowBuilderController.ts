@@ -19,6 +19,12 @@ import ExportFlowBuilderService from "../services/FlowBuilderService/ExportFlowB
 import ImportFlowBuilderService from "../services/FlowBuilderService/ImportFlowBuilderService";
 import fs from "fs";
 import TestFlowBuilderService from "../services/FlowBuilderService/TestFlowBuilderService";
+import { FlowBuilderModel } from "../models/FlowBuilder";
+import { randomString } from "../utils/randomCode";
+import { getIO } from "../libs/socket";
+import Ticket from "../models/Ticket";
+import Contact from "../models/Contact";
+import { ActionsWebhookService } from "../services/WebhookService/ActionsWebhookService";
 // import { handleMessage } from "../services/FacebookServices/facebookMessageListener";
 
 export const createFlow = async (
@@ -315,7 +321,7 @@ export const testFlow = async (
 
     // Validar idFlow
     if (!idFlow || isNaN(parseInt(idFlow))) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "ID do fluxo inválido",
         details: "O parâmetro idFlow deve ser um número válido"
       });
@@ -334,9 +340,128 @@ export const testFlow = async (
     return res.status(200).json(result);
   } catch (error) {
     console.error("Erro ao testar fluxo:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: "Erro ao testar fluxo",
-      details: error.message 
+      details: error.message
+    });
+  }
+};
+
+export const dispatchFlowToTicket = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
+  try {
+    const { flowId, ticketId } = req.body;
+    const { companyId } = req.user;
+
+    if (!flowId || !ticketId) {
+      return res.status(400).json({ error: "flowId e ticketId são obrigatórios" });
+    }
+
+    // Carregar fluxo
+    const flow = await FlowBuilderModel.findOne({
+      where: { id: flowId, company_id: companyId }
+    });
+
+    if (!flow || !flow.flow) {
+      return res.status(404).json({ error: "Fluxo não encontrado" });
+    }
+
+    // Carregar ticket com contato
+    const ticket = await Ticket.findOne({
+      where: { id: ticketId },
+      include: [{ model: Contact, as: "contact" }]
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: "Ticket não encontrado" });
+    }
+
+    const flowData = typeof flow.flow === "string"
+      ? JSON.parse(flow.flow)
+      : flow.flow;
+
+    const nodes = flowData.nodes || [];
+    const connections = flowData.connections || [];
+
+    // Encontrar nó de início
+    const startNode = nodes.find((n: any) => n.type === "start");
+    if (!startNode) {
+      return res.status(400).json({ error: "Fluxo sem nó de início (start)" });
+    }
+
+    // Encontrar conexão que sai do start
+    const startConnection = connections.find((c: any) => c.source === startNode.id);
+    if (!startConnection) {
+      return res.status(400).json({ error: "Fluxo sem conexão saindo do nó start" });
+    }
+
+    // Gerar hash único para o fluxo
+    const newHashFlowId = randomString(42);
+
+    // Atualizar ticket: mover para Automação (pending, sem user, sem queue) e vincular ao fluxo
+    await ticket.update({
+      status: "pending",
+      userId: null,
+      queueId: null,
+      flowWebhook: true,
+      lastFlowId: startConnection.target,
+      hashFlowId: newHashFlowId,
+      flowStopped: flowId.toString()
+    });
+
+    // Emitir eventos de socket para mover ticket nas abas
+    const io = getIO();
+    io.to(`company-${companyId}-mainchannel`)
+      .to(`company-${companyId}-${ticket.status}`)
+      .to(ticket.id.toString())
+      .emit(`company-${companyId}-ticket`, {
+        action: "delete",
+        ticket
+      });
+
+    // Recarregar ticket atualizado para emitir estado correto
+    await ticket.reload();
+
+    io.to(`company-${companyId}-mainchannel`)
+      .to(`company-${companyId}-${ticket.status}`)
+      .to(ticket.id.toString())
+      .emit(`company-${companyId}-ticket`, {
+        action: "update",
+        ticket
+      });
+
+    // Montar dados do contato
+    const contact = ticket.contact as Contact;
+    const mountDataContact = {
+      number: contact?.number || "",
+      name: contact?.name || "",
+      email: contact?.email || ""
+    };
+
+    // Executar primeiro nó do fluxo imediatamente
+    await ActionsWebhookService(
+      ticket.whatsappId,
+      parseInt(flowId),
+      companyId,
+      nodes,
+      connections,
+      startConnection.target,
+      null,
+      "",
+      newHashFlowId,
+      null,
+      ticket.id,
+      mountDataContact
+    );
+
+    return res.status(200).json({ success: true, message: "Fluxo disparado com sucesso" });
+  } catch (error) {
+    console.error("Erro ao disparar fluxo para ticket:", error);
+    return res.status(500).json({
+      error: "Erro ao disparar fluxo",
+      details: error.message
     });
   }
 };
