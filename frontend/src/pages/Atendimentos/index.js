@@ -1650,19 +1650,21 @@ const Atendimentos = () => {
 	const handleCloseTransferModal = (ticketUpdated = false, transferredTicketId = null) => {
 		setTransferTicketModalOpen(false);
 
-		// Ticket transferido: remove da lista imediatamente, sem esperar socket.
-		// Usa transferredTicketId passado pelo modal (mais confiável que selectedTicket,
-		// que pode já ter sido zerado pelo socket delete handler antes desta chamada).
 		if (ticketUpdated) {
+			// 1. Remove imediatamente do estado local para feedback visual instantâneo
 			const idToRemove = transferredTicketId || selectedTicket?.id;
 			if (idToRemove) {
-				setTickets(prevTickets => prevTickets.filter(t => t.id !== idToRemove));
-				// Marca como recém-removido para evitar re-adição por appMessage obsoleto
+				setTickets(prevTickets => prevTickets.filter(t => t.id !== Number(idToRemove) && t.id !== String(idToRemove)));
 				recentlyRemovedRef.current.set(idToRemove, Date.now());
 				setTimeout(() => recentlyRemovedRef.current.delete(idToRemove), 15000);
 			}
 			setSelectedTicket(null);
 			setMessages([]);
+
+			// 2. Re-busca da API — fonte de verdade absoluta.
+			// O PUT já foi commitado no DB antes desta callback ser chamada,
+			// então a busca retorna a lista correta (sem o ticket transferido).
+			loadTickets();
 		}
 	};
 
