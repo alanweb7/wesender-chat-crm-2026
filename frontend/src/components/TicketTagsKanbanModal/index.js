@@ -722,6 +722,8 @@ const TicketTagsKanbanModal = ({ open, onClose, contact, ticket, onUpdate }) => 
 
   const handleKanbanUpdated = () => {
     loadTicketDetails(resolvedTicket?.id || ticket?.id);
+    // Notifica o pai (Atendimentos) para atualizar a lista e o selectedTicket
+    if (typeof onUpdate === "function") onUpdate();
   };
 
   const linkedClient = resolvedTicket?.crmClient || resolvedContact?.crmClient;
@@ -1156,7 +1158,15 @@ const TicketTagsKanbanModal = ({ open, onClose, contact, ticket, onUpdate }) => 
         {resolvedContact && resolvedContact.id && (
           <Box className={classes.section}>
             <Typography className={classes.sectionTitle}>Tags do contato</Typography>
-            <TagsContainer contact={resolvedContact} />
+            <TagsContainer
+              contact={resolvedContact}
+              onUpdate={() => {
+                // Recarrega o contato para mostrar as tags atualizadas no modal
+                if (resolvedContact?.id) loadContactDetails(resolvedContact.id);
+                // Notifica o pai para atualizar a lista de tickets
+                if (typeof onUpdate === "function") onUpdate();
+              }}
+            />
           </Box>
         )}
 

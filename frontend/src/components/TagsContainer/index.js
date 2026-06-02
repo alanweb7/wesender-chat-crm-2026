@@ -5,7 +5,7 @@ import { isArray, isString } from "lodash";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 
-export function TagsContainer({ contact }) {
+export function TagsContainer({ contact, onUpdate }) {
 
     const [tags, setTags] = useState([]);
     const [selecteds, setSelecteds] = useState([]);
@@ -81,6 +81,7 @@ export function TagsContainer({ contact }) {
         }
         setSelecteds(optionsChanged);
         await syncTags({ contactId: contact.id, tags: optionsChanged });
+        if (typeof onUpdate === "function") onUpdate();
     }
 
     function getRandomHexColor() {
