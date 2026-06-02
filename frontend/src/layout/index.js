@@ -899,7 +899,6 @@ const LoggedInLayout = ({ children }) => {
         disabled: !planActive && location.pathname !== "/financeiro",
         children: [
           { title: "Chat", path: "/atendimentos" },
-          { title: "Grupos", path: "/grupos", comingSoon: true },
           { title: "Chamadas", path: "/chamadas" },
         ],
       },
