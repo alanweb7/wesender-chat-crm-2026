@@ -2048,12 +2048,28 @@ useEffect(() => {
 					loadUnreadCounts();
 				}, 100);
 				
-				// **SOLUÇÃO: Usar a mesma função de filtragem em todos os lugares**
-				// Early return: se não pode ver o ticket, não atualiza lista nem notifica
-				if (!ticketMatchesCurrentFilters(data.ticket)) {
+				// **FIX: Inline tab-membership check — zero stale-closure risk**
+				// ticketMatchesCurrentFilters is a stale closure (socket useEffect deps don't include it).
+				// tabIndexRef.current is ALWAYS fresh (updated via useEffect every render).
+				// So we compute tab membership inline using only refs + event data.
+				const _tab    = tabIndexRef.current;
+				const _st     = data.ticket?.status;
+				const _hasU   = !!(data.ticket?.userId   || data.ticket?.user?.id);
+				const _hasQ   = !!(data.ticket?.queueId  || data.ticket?.queue?.id);
+				const _isGrp  = !!data.ticket?.isGroup;
+
+				const _tabMatch = _isGrp
+					? _tab === 4
+					: _tab === 0 ? (_st === "pending" && !_hasU && !_hasQ)
+					: _tab === 1 ? (_st === "pending" && (_hasU  || _hasQ))
+					: _tab === 2 ? (_st === "open"    && _hasU)
+					: _tab === 3 ? (_st === "closed")
+					: false;
+
+				if (!_tabMatch) {
 					// Remove da lista se já estiver visível
 					setTickets(prev => prev.filter(t => t.id !== data.ticket.id));
-					// Marca como recém-removido para evitar re-adição por appMessage obsoleto
+					// Marca como recém-removido para evitar re-adição por appMessage/update obsoleto
 					recentlyRemovedRef.current.set(data.ticket.id, Date.now());
 					setTimeout(() => recentlyRemovedRef.current.delete(data.ticket.id), 15000);
 
@@ -2066,11 +2082,24 @@ useEffect(() => {
 
 					return;
 				}
-				
+
+				// Ticket pertence à aba atual — verificar permissões (usa ticketMatchesCurrentFilters como 2ª camada)
+				if (!ticketMatchesCurrentFilters(data.ticket)) {
+					setTickets(prev => prev.filter(t => t.id !== data.ticket.id));
+					recentlyRemovedRef.current.set(data.ticket.id, Date.now());
+					setTimeout(() => recentlyRemovedRef.current.delete(data.ticket.id), 15000);
+					const currentTicket = selectedTicketRef.current;
+					if (currentTicket && currentTicket.id === data.ticket.id) {
+						setSelectedTicket(null);
+						setMessages([]);
+					}
+					return;
+				}
+
 				// Para notificação, verifica se pertence à aba atual
 				const currentTab = tabIndexRef.current;
 				const ticketStatus = data.ticket.status;
-				
+
 				let belongsToCurrentTab = false;
 				// Grupos sempre aparecem APENAS na aba Grupos
 				if (data.ticket.isGroup) {
@@ -2086,28 +2115,51 @@ useEffect(() => {
 						belongsToCurrentTab = ticketStatus === "closed"; // Fechados
 					}
 				}
-				
+
 				// Só mostra notificação se pertencer à aba atual
 				const shouldNotify = belongsToCurrentTab;
-				
+
 				setTickets((prevTickets) => {
 					const ticketIndex = prevTickets.findIndex(t => t.id === data.ticket.id);
-					
+
 					if (ticketIndex !== -1) {
-						// Ticket já existe na lista - apenas atualiza
+						// **Layer 2 safety: inline tab check inside the state updater**
+						// Handles the race where ticket:update arrives before ticket:delete.
+						const tabIdx  = tabIndexRef.current;
+						const tSt     = data.ticket?.status;
+						const tHasU   = !!(data.ticket?.userId  || data.ticket?.user?.id);
+						const tHasQ   = !!(data.ticket?.queueId || data.ticket?.queue?.id);
+						const tIsGrp  = !!data.ticket?.isGroup;
+
+						const tTabOk  = tIsGrp
+							? tabIdx === 4
+							: tabIdx === 0 ? (tSt === "pending" && !tHasU && !tHasQ)
+							: tabIdx === 1 ? (tSt === "pending" && (tHasU  || tHasQ))
+							: tabIdx === 2 ? (tSt === "open"    && tHasU)
+							: tabIdx === 3 ? (tSt === "closed")
+							: false;
+
+						if (!tTabOk) {
+							// Ticket já não pertence a esta aba — remove
+							recentlyRemovedRef.current.set(data.ticket.id, Date.now());
+							setTimeout(() => recentlyRemovedRef.current.delete(data.ticket.id), 15000);
+							return prevTickets.filter(t => t.id !== data.ticket.id);
+						}
+
+						// Ticket ainda pertence à aba — atualiza normalmente
 						const updatedTickets = [...prevTickets];
 						const oldTicket = updatedTickets[ticketIndex];
 						updatedTickets[ticketIndex] = data.ticket;
-						
+
 						// Reordena APENAS se for mensagem nova (lastMessage mudou) OU se status mudou (muda de aba)
 						const shouldReorder = oldTicket.lastMessage !== data.ticket.lastMessage ||
 							oldTicket.status !== data.ticket.status;
-						
+
 						if (shouldReorder) {
 							const result = updatedTickets.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 							return [...result];
 						}
-						
+
 						// Forçar re-renderização mesmo sem mudanças significativas
 						return [...updatedTickets];
 					} else if (shouldNotify && ticketMatchesCurrentFilters(data.ticket)) {
@@ -4523,12 +4575,20 @@ useEffect(() => {
 							<div style={{ display: "flex", justifyContent: "center", padding: 20 }}>
 								<CircularProgress size={30} />
 							</div>
-						) : tickets.length === 0 ? (
+						) : (() => {
+							// **Layer 3 safety net: filter tickets to current tab at render time**
+							// Ensures that even if a stale/wrong-status ticket survives in `tickets` state
+							// (e.g. due to a race condition), it will never be rendered in the wrong tab.
+							const tabFilter = TAB_CONFIG[tabIndex]?.filter;
+							const visibleTickets = tabFilter
+								? tickets.filter(tabFilter)
+								: tickets;
+							return visibleTickets.length === 0 ? (
 							<div style={{ padding: 20, textAlign: "center", color: "#667781" }}>
 								Nenhum atendimento encontrado
 							</div>
 						) : (
-							tickets.map((ticket) => (
+							visibleTickets.map((ticket) => (
 								<div
 									key={ticket.id}
 									className={`${classes.ticketItem} ${selectedTicket?.id === ticket.id ? "active" : ""}`}
@@ -4644,7 +4704,8 @@ useEffect(() => {
 									</div>
 								</div>
 							))
-						)}
+						);
+						})()}
 					</div>
 				</div>
 			)}
