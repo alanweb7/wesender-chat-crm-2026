@@ -131,7 +131,7 @@ const FlowListModal = ({ open, onClose, ticketId }) => {
         ticketId,
       });
       toast.success(`Fluxo "${flow.name}" disparado com sucesso!`);
-      onClose();
+      onClose(true);
     } catch (err) {
       toastError(err);
     } finally {

@@ -1670,6 +1670,22 @@ const Atendimentos = () => {
 		}
 	};
 
+	const handleCloseFlowListModal = (dispatched = false) => {
+		setFlowListModalOpen(false);
+
+		if (dispatched) {
+			const idToRemove = selectedTicket?.id;
+			if (idToRemove) {
+				setTickets(prevTickets => prevTickets.filter(t => t.id !== Number(idToRemove) && t.id !== String(idToRemove)));
+				recentlyRemovedRef.current.set(idToRemove, Date.now());
+				setTimeout(() => recentlyRemovedRef.current.delete(idToRemove), 15000);
+			}
+			setSelectedTicket(null);
+			setMessages([]);
+			loadTickets();
+		}
+	};
+
 	// **NOVO: Forçar re-render quando selectedTicket mudar**
 	useEffect(() => {
 		if (selectedTicket) {
@@ -5894,7 +5910,7 @@ useEffect(() => {
 			{/* Modal de Lista de Fluxos */}
 			<FlowListModal
 				open={flowListModalOpen}
-				onClose={() => setFlowListModalOpen(false)}
+				onClose={handleCloseFlowListModal}
 				ticketId={selectedTicket?.id}
 			/>
 		</div>
