@@ -1649,13 +1649,23 @@ const Atendimentos = () => {
 
 	const handleCloseTransferModal = async (ticketUpdated = false) => {
 		setTransferTicketModalOpen(false);
-		
+
 		// Se o ticket foi atualizado (transferido), recarrega os dados
 		if (ticketUpdated && selectedTicket) {
 			try {
 				const { data } = await api.get(`/tickets/${selectedTicket.id}`);
+
+				// Se o ticket transferido não corresponde mais aos filtros/aba atual,
+				// remove da lista e fecha o painel — evita race condition com o socket
+				if (!ticketMatchesCurrentFilters(data)) {
+					setTickets(prevTickets => prevTickets.filter(t => t.id !== data.id));
+					setSelectedTicket(null);
+					setMessages([]);
+					return;
+				}
+
 				setSelectedTicket(data);
-				
+
 				// Atualiza também na lista de tickets mantendo updatedAt original
 				setTickets(prevTickets => {
 					const originalTicket = prevTickets.find(t => t.id === data.id);
@@ -1663,11 +1673,11 @@ const Atendimentos = () => {
 						...data,
 						updatedAt: originalTicket?.updatedAt || data.updatedAt
 					};
-					return prevTickets.map(ticket => 
+					return prevTickets.map(ticket =>
 						ticket.id === data.id ? updatedTicket : ticket
 					);
 				});
-				
+
 			} catch (err) {
 			}
 		}
