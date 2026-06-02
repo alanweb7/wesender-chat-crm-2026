@@ -377,12 +377,16 @@ const FlowBuilder = () => {
   };
 
   const handleDuplicateFlow = async (flowId) => {
-    // Ler do ref — sempre tem o valor atual independente de closures React
     const nameToUse = (duplicateNameRef.current || "").trim();
     try {
-      const body = nameToUse ? { flowId, name: nameToUse } : { flowId };
-      console.log("[Duplicate] Enviando:", body);
-      await api.post(`/flowbuilder/duplicate`, body);
+      // 1. Duplicar (cria com nome default)
+      const { data: newFlow } = await api.post(`/flowbuilder/duplicate`, { flowId });
+
+      // 2. Se o usuário digitou um nome, renomear imediatamente via PUT /flowbuilder
+      if (nameToUse && newFlow?.id) {
+        await api.put(`/flowbuilder`, { flowId: newFlow.id, name: nameToUse });
+      }
+
       toast.success("Fluxo duplicado com sucesso");
       setReloadData((old) => !old);
     } catch (err) {
