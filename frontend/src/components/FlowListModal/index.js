@@ -109,7 +109,7 @@ const FlowListModal = ({ open, onClose, ticketId }) => {
       try {
         setLoading(true);
         const { data } = await api.get("/flowbuilder");
-        setFlows(data || []);
+        setFlows(data?.flows || data || []);
       } catch (err) {
         toastError(err);
       } finally {
