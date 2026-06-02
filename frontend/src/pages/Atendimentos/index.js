@@ -1647,17 +1647,20 @@ const Atendimentos = () => {
 		setTransferTicketModalOpen(true);
 	};
 
-	const handleCloseTransferModal = (ticketUpdated = false) => {
+	const handleCloseTransferModal = (ticketUpdated = false, transferredTicketId = null) => {
 		setTransferTicketModalOpen(false);
 
-		// Ticket transferido: remove da lista imediatamente, sem esperar socket
-		// O socket pode demorar ou ter race conditions — aqui garantimos a remoção visual
-		if (ticketUpdated && selectedTicket) {
-			const ticketId = selectedTicket.id;
-			setTickets(prevTickets => prevTickets.filter(t => t.id !== ticketId));
-			// Marca como recém-removido para evitar re-adição por appMessage obsoleto
-			recentlyRemovedRef.current.set(ticketId, Date.now());
-			setTimeout(() => recentlyRemovedRef.current.delete(ticketId), 15000);
+		// Ticket transferido: remove da lista imediatamente, sem esperar socket.
+		// Usa transferredTicketId passado pelo modal (mais confiável que selectedTicket,
+		// que pode já ter sido zerado pelo socket delete handler antes desta chamada).
+		if (ticketUpdated) {
+			const idToRemove = transferredTicketId || selectedTicket?.id;
+			if (idToRemove) {
+				setTickets(prevTickets => prevTickets.filter(t => t.id !== idToRemove));
+				// Marca como recém-removido para evitar re-adição por appMessage obsoleto
+				recentlyRemovedRef.current.set(idToRemove, Date.now());
+				setTimeout(() => recentlyRemovedRef.current.delete(idToRemove), 15000);
+			}
 			setSelectedTicket(null);
 			setMessages([]);
 		}

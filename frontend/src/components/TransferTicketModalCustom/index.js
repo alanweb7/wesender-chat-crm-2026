@@ -232,11 +232,12 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid, ticket }) => 
       // Notificar toast de sucesso
       toast.success("Ticket transferido com sucesso!");
 
-      // Fechar modal sinalizando que houve transferência (ticketUpdated=true)
+      // Fechar modal sinalizando que houve transferência — passa o ticketid diretamente
+      // (não depende do selectedTicket do parent, que pode ter sido limpo pelo socket antes disso)
       setSearchParam("");
       setSelectedUser(null);
       setSelectedWhatsapp("");
-      onClose(true);
+      onClose(true, ticketid);
     } catch (err) {
       setLoading(false);
       toastError(err);
