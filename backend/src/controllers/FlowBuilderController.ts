@@ -55,13 +55,9 @@ export const updateFlow = async (
   const { companyId } = req.user;
   const { flowId, name } = req.body;
 
-  const flow = await UpdateFlowBuilderService({ companyId, name, flowId });
+  const result = await UpdateFlowBuilderService({ companyId, name, flowId });
 
-  if(flow === 'exist'){
-    return res.status(402).json('exist')
-  }
-
-  return res.status(200).json(flow);
+  return res.status(200).json(result);
 };
 
 export const deleteFlow = async (
